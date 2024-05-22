@@ -343,4 +343,118 @@ class PassiveDiffusion(VPSDE):
         return torch.ones_like(t, device=self.config.device)
     
 class ActiveDiffusion(CLD):
-    pass
+    def __init__(self, config, beta_fn, beta_int_fn):
+        config.m_inv = 1
+        
+        super().__init__(config, beta_fn, beta_int_fn)
+        
+        self.Tp = config.Tp
+        self.Ta = config.Ta
+        self.tau = config.tau
+        self.k = config.k
+    
+    @property
+    def type(self):
+        return 'active'
+    
+    def sde(self, u, t):
+        k = self.k
+        tau = self.tau
+        Tp = self.Tp
+        Ta = self.Ta
+
+        x, eta = torch.chunk(u, 2, dim=1)
+        
+        x = torch.reshape(x, (-1,2))
+        eta = torch.reshape(eta, (-1,2))
+                                
+        drift_x = - k * x + eta
+        drift_eta =  - eta / tau
+        
+        diffusion_x = np.sqrt(2 * Tp) * torch.ones_like(x)
+        
+        diffusion_eta = 1 / tau * np.sqrt(2 * Ta) * torch.ones_like(eta)
+                                      
+        return torch.cat((drift_x, drift_eta), dim=1), \
+               torch.cat((diffusion_x, diffusion_eta), dim=1)
+    
+    def get_reverse_sde(self, score_fn=None, probability_flow=False):
+        sde_fn = self.sde
+
+        def reverse_sde(u, t, score=None):
+            '''
+            Evaluating drift and diffusion of the ReverseSDE.
+            '''
+            drift, diffusion = sde_fn(u, 1. - t)
+            score = score if score is not None else score_fn(u, 1. - t)
+
+            score_x, score_v = torch.chunk(score, 2, dim=1)
+
+            drift_x, drift_v = torch.chunk(drift, 2, dim=1)
+            diffusion_x, diffusion_v = torch.chunk(diffusion, 2, dim=1)
+
+            reverse_drift_x = -drift_x + diffusion_x**2 * \
+                score_x * (0.5 if probability_flow else 1.)
+                
+            reverse_drift_v = -drift_v + diffusion_v ** 2. * \
+                score_v * (0.5 if probability_flow else 1.)
+            
+            reverse_diffusion_x = diffusion_x
+            
+            reverse_diffusion_v = diffusion_v
+
+            return torch.cat((reverse_drift_x, reverse_drift_v), dim=1), \
+                   torch.cat((reverse_diffusion_x, reverse_diffusion_v), dim=1)
+
+        return reverse_sde
+    
+    def var(self, t, var0x=None, var0v=None):
+        k = self.k      
+        w = 1 / self.tau
+        tau = self.tau
+        
+        a = torch.exp(-k*t)
+        b = torch.exp(-w*t)
+        c = k + w
+        d = k - w
+        
+        a = add_dimensions(a, self.config.is_image)
+        b = add_dimensions(b, self.config.is_image)
+
+        Tp = self.Tp
+        Ta = self.Ta
+
+        M11 = (Tp/k)*(1-a**2) + \
+                (Ta / tau**2) * (tau/(k*c) + 1/d**2*(4*a*b/c - b**2*tau - a**2/k))
+  
+        M12 = Ta /(tau * c* d) * (k *(1-b**2) - 1/tau * (1 + b**2 - 2*a*b))
+   
+        M22 = (Ta/tau)*(1-b**2)
+
+        return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
+    
+    def mean(self, batch, t):
+        k = self.k
+        w = 1/self.tau
+        
+        Tp = self.Tp
+        Ta = self.Ta
+
+        a = torch.exp(-k*t)
+        b = (torch.exp(-w*t)-torch.exp(-k*t))/(k-w) if Ta > 0 \
+            else 0
+        c = torch.exp(-w*t)
+        
+        a = add_dimensions(a, self.config.is_image)
+        b = add_dimensions(b, self.config.is_image)
+        c = add_dimensions(c, self.config.is_image)
+        
+        batch_x, batch_eta = torch.chunk(batch, 2, dim=1)
+        
+        mean_x = a * batch_x + b * batch_eta
+        mean_eta = c * batch_eta
+                
+        return torch.cat((mean_x, mean_eta), dim=1)
+    
+    def loss_multiplier(self, t):
+        return torch.ones_like(t, device=self.config.device)

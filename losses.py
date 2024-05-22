@@ -17,12 +17,20 @@ def get_loss_fn(sde, train, config):
         # Setting up initial means
         if sde.is_augmented:
             if config.cld_objective == 'dsm':
-                v = torch.randn_like(x, device=x.device) * \
-                    np.sqrt(sde.gamma / sde.m_inv)
+                if config.sde == 'cld':
+                    v = torch.randn_like(x, device=x.device) * \
+                        np.sqrt(sde.gamma / sde.m_inv)
+                elif config.sde == 'active':
+                    v = np.sqrt(config.Ta / config.tau) * \
+                        torch.normal(torch.zeros_like(x), torch.ones_like(x))
                 batch = torch.cat((x, v), dim=1)
             elif config.cld_objective == 'hsm':
                 # For HSM we are marginalizing over the full initial velocity
-                v = torch.zeros_like(x, device=x.device)
+                if config.sde == 'cld':
+                    v = torch.zeros_like(x, device=x.device)
+                elif config.sde == 'active':
+                    v = np.sqrt(config.Ta / config.tau) * \
+                        torch.normal(torch.zeros_like(x), torch.ones_like(x))
                 batch = torch.cat((x, v), dim=1)
             else:
                 raise NotImplementedError(
@@ -37,7 +45,7 @@ def get_loss_fn(sde, train, config):
         mean = mean.type(torch.float32)
 
         # In the augmented case, we only need "velocity noise" for the loss
-        if sde.is_augmented:
+        if sde.is_augmented and not (sde.type == 'active'):
             _, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
             batch_randn = batch_randn_v
 

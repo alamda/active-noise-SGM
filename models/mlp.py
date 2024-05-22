@@ -23,13 +23,17 @@ class MLP(nn.Module):
         act = nn.SiLU()
 
         self.x_input = True
-        self.v_input = True if config.sde == 'cld' else False
+        self.v_input = True if config.sde in ('cld', 'active') else False
 
         if self.x_input and self.v_input:
             in_dim = input_dim * 2 + index_dim
         else:
             in_dim = input_dim + index_dim
-        out_dim = input_dim
+        
+        if config.sde == 'active':
+            out_dim = input_dim * 2
+        else:
+            out_dim = input_dim
 
         self.main = nn.Sequential(nn.Linear(in_dim, hidden_dim),
                                   act,
