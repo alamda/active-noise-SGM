@@ -4,9 +4,9 @@ data_dim             = 2
 mode                 = train
 
 n_gpus_per_node      = 1
-training_batch_size  = 256
-testing_batch_size   = 256
-sampling_batch_size  = 256
+training_batch_size  = 512
+testing_batch_size   = 512
+sampling_batch_size  = 512
 dataset              = multimodal_swissroll
 
 # Training
@@ -19,7 +19,7 @@ likelihood_freq      = 50000
 n_eval_batches       = 1
 n_likelihood_batches = 1
 n_warmup_iters       = 0
-n_train_iters        = 800000
+n_train_iters        = 1000000
 save_freq            = 50000
 save_threshold       = 300000
 
