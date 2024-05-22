@@ -30,10 +30,7 @@ class MLP(nn.Module):
         else:
             in_dim = input_dim + index_dim
         
-        if config.sde == 'active':
-            out_dim = input_dim * 2
-        else:
-            out_dim = input_dim
+        out_dim = input_dim
 
         self.main = nn.Sequential(nn.Linear(in_dim, hidden_dim),
                                   act,

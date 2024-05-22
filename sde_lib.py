@@ -388,16 +388,13 @@ class ActiveDiffusion(CLD):
             drift, diffusion = sde_fn(u, 1. - t)
             score = score if score is not None else score_fn(u, 1. - t)
 
-            score_x, score_v = torch.chunk(score, 2, dim=1)
-
             drift_x, drift_v = torch.chunk(drift, 2, dim=1)
             diffusion_x, diffusion_v = torch.chunk(diffusion, 2, dim=1)
 
-            reverse_drift_x = -drift_x + diffusion_x**2 * \
-                score_x * (0.5 if probability_flow else 1.)
+            reverse_drift_x = -drift_x 
                 
             reverse_drift_v = -drift_v + diffusion_v ** 2. * \
-                score_v * (0.5 if probability_flow else 1.)
+                score * (0.5 if probability_flow else 1.)
             
             reverse_diffusion_x = diffusion_x
             

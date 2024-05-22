@@ -45,7 +45,7 @@ def get_loss_fn(sde, train, config):
         mean = mean.type(torch.float32)
 
         # In the augmented case, we only need "velocity noise" for the loss
-        if sde.is_augmented and not (sde.type == 'active'):
+        if sde.is_augmented:
             _, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
             batch_randn = batch_randn_v
 
