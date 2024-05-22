@@ -305,3 +305,42 @@ class VPSDE(nn.Module):
             u = u_mean + diffusion * noise
             return u, u_mean
         return discrete_step_fn
+
+class PassiveDiffusion(VPSDE):
+    def __init__(self, config, beta_fn, beta_int_fn):
+        super().__init__(config, beta_fn, beta_int_fn)
+        
+        self.Tp = config.Tp
+        self.k = config.k
+        
+    @property
+    def type(self):
+        return 'passive'
+    
+    def sde(self, u, t):
+        drift = - self.k * u
+        
+        diffusion = np.sqrt(2* self.Tp) * \
+            torch.ones_like(u, device=self.config.device)
+
+        return drift, diffusion
+    
+    def var(self, t, var0x=None): 
+        a = torch.exp(-self.k*t)
+        a = add_dimensions(a, self.config.is_image)
+        
+        var = (1/self.k)*self.Tp*(1-a**2)
+        return [var]
+    
+    def mean(self, x, t):
+        a = torch.exp(-self.k*t)
+        a = add_dimensions(a, self.config.is_image)
+        
+        mean_x = a * x
+        return mean_x
+    
+    def loss_multiplier(self, t):
+        return torch.ones_like(t, device=self.config.device)
+    
+class ActiveDiffusion(CLD):
+    pass
