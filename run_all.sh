@@ -5,12 +5,16 @@ out_file="simulations/progress.out"
 [ -e $out_file ] && rm $out_file
 
 sims=("vpsde_multiswiss"
+      "vpsde_multiswiss_overlap"
 	  "vpsde_swiss"
 	  "cld_multiswiss"
+	  "cld_multiswiss_overlap"
 	  "cld_swiss"
 	  "passive_multiswiss"
+	  "passive_multiswiss_overlap"
 	  "passive_swiss"
 	  "active_multiswiss"
+	  "active_multiswiss_overlap"
 	  "active_swiss")
 
 for sim in "${sims[@]}"

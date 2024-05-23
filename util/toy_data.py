@@ -63,6 +63,24 @@ def inf_data_gen(dataset, batch_size):
 
         data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
         return torch.from_numpy(data.astype('float32'))
+    
+    if dataset == 'multimodal_swissroll_overlap':
+        NOISE = 0.2
+        MULTIPLIER = 0.01
+        OFFSETS = [[0.1, 0.1], [0.1, -0.1], [-0.1, -0.1], [-0.1, 0.1]]
+
+        idx = np.random.multinomial(batch_size, [0.2] * 5, size=1)[0]
+
+        sr = []
+        for k in range(5):
+            sr.append(make_swiss_roll(int(idx[k]), noise=NOISE)[
+                      0][:, [0, 2]].astype('float32') * MULTIPLIER)
+
+            if k > 0:
+                sr[k] += np.array(OFFSETS[k - 1]).reshape(-1, 2)
+
+        data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
+        return torch.from_numpy(data.astype('float32'))
 
     else:
         raise NotImplementedError(
