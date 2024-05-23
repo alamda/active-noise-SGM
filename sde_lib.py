@@ -340,7 +340,7 @@ class PassiveDiffusion(VPSDE):
         return mean_x
     
     def loss_multiplier(self, t):
-        return torch.ones_like(t, device=self.config.device)
+        return self.Tp
     
 class ActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
@@ -454,4 +454,4 @@ class ActiveDiffusion(CLD):
         return torch.cat((mean_x, mean_eta), dim=1)
     
     def loss_multiplier(self, t):
-        return torch.ones_like(t, device=self.config.device)
+        return self.Ta / self.tau**2
