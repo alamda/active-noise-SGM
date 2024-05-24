@@ -1,0 +1,8 @@
+__pycache__/
+progress.out
+
+#Simulations subdirectories
+vpsde_*/
+cld_*/
+passive_*/
+active_*/
