@@ -1,5 +1,7 @@
 #!/bin/bash
 
+port=7021
+
 dirdir=("simulations_ml"
 	    "simulations_rv1"
 		"simulations_rv2")
@@ -27,7 +29,9 @@ do
 
 	if [ ! -d $root_dir ]
 	then
-		sbatch --account=pi-dfreedman --partition=schmidt-gpu --gres=gpu:1 --qos=schmidt --time=3:00:00 --wrap "conda run -n pytorch python main.py -cc ${dir}/config_${sim}_train.txt --root $root_dir --workdir work_dir/dataset"
+		sbatch --account=pi-dfreedman --partition=schmidt-gpu --gres=gpu:1 --qos=schmidt --time=3:00:00 --wrap "conda run -n pytorch python main.py -cc ${dir}/config_${sim}_train.txt --root $root_dir --workdir work_dir/dataset --master_port $port"
+
+		((port++))
 	fi
 
 done
