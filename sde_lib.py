@@ -318,29 +318,34 @@ class PassiveDiffusion(VPSDE):
         return 'passive'
     
     def sde(self, u, t):
-        drift = - self.k * u
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
         
-        diffusion = np.sqrt(2* self.Tp) * \
-            torch.ones_like(u, device=self.config.device)
+        drift = - self.k * beta * u
+        
+        diffusion = torch.sqrt(2 * beta * self.Tp)
 
         return drift, diffusion
     
     def var(self, t, var0x=None): 
-        a = torch.exp(-self.k*t)
-        a = add_dimensions(a, self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+
+        a = torch.exp(-self.k * beta_int)
         
         var = (1/self.k)*self.Tp*(1-a**2)
         return [var]
     
     def mean(self, x, t):
-        a = torch.exp(-self.k*t)
-        a = add_dimensions(a, self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        
+        a = torch.exp(-self.k * beta_int)
         
         mean_x = a * x
         return mean_x
     
     def loss_multiplier(self, t):
-        return self.Tp * torch.ones_like(t, device=t.device)
+        beta = self.beta_fn(t)
+        
+        return self.Tp * beta
     
 class ActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
@@ -358,6 +363,8 @@ class ActiveDiffusion(CLD):
         return 'active'
     
     def sde(self, u, t):
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
+        
         k = self.k
         tau = self.tau
         Tp = self.Tp
@@ -368,12 +375,12 @@ class ActiveDiffusion(CLD):
         x = torch.reshape(x, (-1,2))
         eta = torch.reshape(eta, (-1,2))
                                 
-        drift_x = - k * x + eta
-        drift_eta =  - eta / tau
+        drift_x = - k * beta * x + beta*eta
+        drift_eta =  - beta *eta / tau
         
-        diffusion_x = np.sqrt(2 * Tp) * torch.ones_like(x)
+        diffusion_x = torch.sqrt(2 * beta * Tp) * torch.ones_like(x)
         
-        diffusion_eta = 1 / tau * np.sqrt(2 * Ta) * torch.ones_like(eta)
+        diffusion_eta = 1 / tau * torch.sqrt(2 * beta * Ta) * torch.ones_like(eta)
                                       
         return torch.cat((drift_x, drift_eta), dim=1), \
                torch.cat((diffusion_x, diffusion_eta), dim=1)
@@ -406,17 +413,16 @@ class ActiveDiffusion(CLD):
         return reverse_sde
     
     def var(self, t, var0x=None, var0v=None):
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        
         k = self.k      
         w = 1 / self.tau
         tau = self.tau
         
-        a = torch.exp(-k*t)
-        b = torch.exp(-w*t)
+        a = torch.exp(-k*beta_int)
+        b = torch.exp(-w*beta_int)
         c = k + w
         d = k - w
-        
-        a = add_dimensions(a, self.config.is_image)
-        b = add_dimensions(b, self.config.is_image)
 
         Tp = self.Tp
         Ta = self.Ta
@@ -431,20 +437,14 @@ class ActiveDiffusion(CLD):
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
     
     def mean(self, batch, t):
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        
         k = self.k
         w = 1/self.tau
-        
-        Tp = self.Tp
-        Ta = self.Ta
 
-        a = torch.exp(-k*t)
-        b = (torch.exp(-w*t)-torch.exp(-k*t))/(k-w) if Ta > 0 \
-            else 0
-        c = torch.exp(-w*t)
-        
-        a = add_dimensions(a, self.config.is_image)
-        b = add_dimensions(b, self.config.is_image)
-        c = add_dimensions(c, self.config.is_image)
+        a = torch.exp(-k * beta_int)
+        b = (torch.exp(-w * beta_int)-torch.exp(-k * beta_int))/(k-w)
+        c = torch.exp(-w * beta_int)
         
         batch_x, batch_eta = torch.chunk(batch, 2, dim=1)
         
@@ -454,4 +454,5 @@ class ActiveDiffusion(CLD):
         return torch.cat((mean_x, mean_eta), dim=1)
     
     def loss_multiplier(self, t):
-        return self.Ta / self.tau**2 * torch.ones_like(t, device=t.device)
+        beta = self.beta_fn(t)
+        return self.Ta * beta / self.tau**2
