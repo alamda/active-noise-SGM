@@ -349,7 +349,7 @@ class PassiveDiffusion(VPSDE):
     
 class ActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
-        config.m_inv = 1
+        config.m_inv = np.sqrt(config.tau / config.Ta)
         
         super().__init__(config, beta_fn, beta_int_fn)
         
@@ -385,33 +385,6 @@ class ActiveDiffusion(CLD):
         return torch.cat((drift_x, drift_eta), dim=1), \
                torch.cat((diffusion_x, diffusion_eta), dim=1)
     
-    def get_reverse_sde(self, score_fn=None, probability_flow=False):
-        sde_fn = self.sde
-
-        def reverse_sde(u, t, score=None):
-            '''
-            Evaluating drift and diffusion of the ReverseSDE.
-            '''
-            drift, diffusion = sde_fn(u, 1. - t)
-            score = score if score is not None else score_fn(u, 1. - t)
-
-            drift_x, drift_v = torch.chunk(drift, 2, dim=1)
-            diffusion_x, diffusion_v = torch.chunk(diffusion, 2, dim=1)
-
-            reverse_drift_x = -drift_x 
-                
-            reverse_drift_v = -drift_v + diffusion_v ** 2. * \
-                score * (0.5 if probability_flow else 1.)
-            
-            reverse_diffusion_x = diffusion_x
-            
-            reverse_diffusion_v = diffusion_v
-
-            return torch.cat((reverse_drift_x, reverse_drift_v), dim=1), \
-                   torch.cat((reverse_diffusion_x, reverse_diffusion_v), dim=1)
-
-        return reverse_sde
-    
     def var(self, t, var0x=None, var0v=None):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
         
@@ -435,6 +408,7 @@ class ActiveDiffusion(CLD):
         M22 = (Ta/tau)*(1-b**2)
 
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
+        # return [M11, M12, M22]
     
     def mean(self, batch, t):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
