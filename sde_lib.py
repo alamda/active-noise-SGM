@@ -10,6 +10,7 @@ import torch.nn as nn
 import numpy as np
 from util.utils import add_dimensions
 
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 class CLD(nn.Module):
     def __init__(self, config, beta_fn, beta_int_fn):
@@ -349,7 +350,7 @@ class PassiveDiffusion(VPSDE):
     
 class ActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
-        config.m_inv = np.sqrt(config.tau / config.Ta)
+        config.m_inv = 1
         
         super().__init__(config, beta_fn, beta_int_fn)
         
@@ -385,6 +386,29 @@ class ActiveDiffusion(CLD):
         return torch.cat((drift_x, drift_eta), dim=1), \
                torch.cat((diffusion_x, diffusion_eta), dim=1)
     
+    def prior_sampling(self, shape):
+        var_11 = 1/self.k * (self.Tp + self.Ta/(1+ self.k*self.tau))
+        var_12 = self.Ta/(2+ self.tau*self.k)
+        var_22 = self.Ta / self.tau
+        
+        zero_mean = torch.zeros(2, device=self.config.device)
+        
+        covar = torch.tensor([var_11, var_12, var_12, var_22], device=self.config.device)
+        covar = torch.reshape(covar, (2,2))
+        
+        sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
+        
+        sample_1 = sampler.sample(sample_shape=torch.Size([shape[0]]))
+        sample_2 = sampler.sample(sample_shape=torch.Size([shape[0]]))
+        
+        sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=1)
+        sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=1)
+        
+        sample_x = torch.cat((sample_1x, sample_2x), dim=1)
+        sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
+        
+        return sample_x, sample_eta
+    
     def var(self, t, var0x=None, var0v=None):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
         
@@ -408,7 +432,6 @@ class ActiveDiffusion(CLD):
         M22 = (Ta/tau)*(1-b**2)
 
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
-        # return [M11, M12, M22]
     
     def mean(self, batch, t):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
