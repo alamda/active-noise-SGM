@@ -4,22 +4,24 @@ out_file="progress.out"
 
 [ -e $out_file ] && rm $out_file
 
-dirdir=("simulations_ml"
-	    "simulations_rv1"
-		"simulations_rv2")
+dirdir=(#"simulations_ml"
+	    #"simulations_rv1"
+		"simulations_rv2"
+		)
 
-sims=("vpsde_multiswiss"
-      "vpsde_multiswiss_overlap"
-	  "vpsde_swiss"
-	  "cld_multiswiss"
-	  "cld_multiswiss_overlap"
-	  "cld_swiss"
-	  "passive_multiswiss"
-	  "passive_multiswiss_overlap"
-	  "passive_swiss"
-	  "active_multiswiss"
-	  "active_multiswiss_overlap"
-	  "active_swiss")
+sims=(#"vpsde_multiswiss"
+      #"vpsde_multiswiss_overlap"
+	  #"vpsde_swiss"
+	  #"cld_multiswiss"
+	  #"cld_multiswiss_overlap"
+	  #"cld_swiss"
+	  #"passive_multiswiss"
+	  #"passive_multiswiss_overlap"
+	  #"passive_swiss"
+	  #"active_multiswiss"
+	  #"active_multiswiss_overlap"
+	  "active_swiss"
+      )
 
 for dir in "${dirdir[@]}"
 do

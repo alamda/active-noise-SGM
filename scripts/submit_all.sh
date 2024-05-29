@@ -45,7 +45,7 @@ do
 
 				[ ! -d $sim_sub_dir ] && mkdir $sim_sub_dir
 				
-				echo 'sbatch --account=pi-dfreedman --partition=schmidt-gpu --gres=gpu:1 --qos=schmidt --time=3:00:00 --name '${sim_sub_dir}' --wrap "echo '${sim_sub_dir}' ; conda run -n pytorch python '${root_dir}'/main.py -cc '${root_dir}'/config_toy.txt --root '${sim_sub_dir}' --workdir work_dir/dataset --master_port '${port}' --weighting '${weighting}' --sde '${sde}' --dataset '${dataset}' --tau '${tau}'"' > ${sim_sub_dir}/sbatch.sh
+				echo 'sbatch --account=pi-dfreedman --partition=schmidt-gpu --gres=gpu:1 --qos=schmidt --time=3:00:00 -J '${sim_sub_dir}' --wrap "echo '${sim_sub_dir}' ; conda run -n pytorch python '${root_dir}'/main.py -cc '${root_dir}'/config_toy.txt --root '${sim_sub_dir}' --workdir work_dir/dataset --master_port '${port}' --weighting '${weighting}' --sde '${sde}' --dataset '${dataset}' --tau '${tau}'"' > ${sim_sub_dir}/sbatch.sh
 
 				((port++))
 				
