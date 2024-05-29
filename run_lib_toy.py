@@ -19,7 +19,7 @@ from matplotlib import cm
 from models import mlp
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
-from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
+from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn, get_data_inverse_scaler
 from util.checkpoint import save_checkpoint, restore_checkpoint
 import losses
 import sde_lib
@@ -174,7 +174,7 @@ def train(config, workdir):
                         'sample_rank_%d.png' % global_rank))
             plt.close()
 
-            if config.sde == 'cld':
+            if config.sde in ('cld', 'active'):
                 np.save(os.path.join(this_sample_dir, 'sample_x'), x.cpu())
                 np.save(os.path.join(this_sample_dir, 'sample_v'), v.cpu())
             else:
@@ -240,8 +240,12 @@ def evaluate(config, workdir):
         sde = sde_lib.VPSDE(config, beta_fn, beta_int_fn)
     elif config.sde == 'cld':
         sde = sde_lib.CLD(config, beta_fn, beta_int_fn)
+    elif config.sde == 'passive':
+        sde = sde_lib.PassiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'active':
+        sde = sde_lib.ActiveDiffusion(config, beta_fn, beta_int_fn)
     else:
-        raise NotImplementedError('SDE %s is unknown.' % config.vpsde)
+        raise NotImplementedError('SDE %s is unknown.' % config.sde)
 
     score_model = mutils.create_model(config).to(config.device)
     broadcast_params(score_model.parameters())
@@ -287,9 +291,27 @@ def evaluate(config, workdir):
         dist.barrier()
 
     if config.eval_sample:
-        x, _, nfe = sampling_fn(score_model)
-        logging.info('NFE: %d' % nfe)
+        global_size = config.global_size
+        inverse_scaler = get_data_inverse_scaler(config)
+        num_sampling_rounds = config.eval_sample_samples // (
+            config.sampling_batch_size * global_size) + 1
 
-        plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
-        plt.savefig(os.path.join(sample_dir, 'sample_%d.png' % global_rank))
-        plt.close()
+        for r in range(num_sampling_rounds):
+            if global_rank == 0:
+                logging.info('sampling -- round: %d' % r)
+            dist.barrier()
+
+            x, _, nfe = sampling_fn(score_model)
+            x = inverse_scaler(x)
+            samples = x.clamp(0.0, 1.0)
+
+            torch.save(samples, os.path.join(
+                sample_dir, 'samples_%d_%d.pth' % (r, global_rank)))
+            np.save(os.path.join(sample_dir, 'nfes_%d_%d.npy' %
+                    (r, global_rank)), np.array([nfe]))
+        # x, _, nfe = sampling_fn(score_model)
+        # logging.info('NFE: %d' % nfe)
+
+            plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
+            plt.savefig(os.path.join(sample_dir, 'sample_%d.png' % global_rank))
+            plt.close()
