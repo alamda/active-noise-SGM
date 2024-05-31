@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import matplotlib.pyplot as plt
 
 input_path = sys.argv[1] # currently assumes a relative image path
 image_path = sys.argv[2]
