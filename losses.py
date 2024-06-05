@@ -39,7 +39,7 @@ def get_loss_fn(sde, train, config):
             batch = x
 
         t = torch.rand(batch.shape[0], device=batch.device,
-                       dtype=torch.float64) * (1.0 - config.loss_eps) + config.loss_eps
+                       dtype=torch.float64) * (config.max_time - config.loss_eps) + config.loss_eps
         perturbed_data, mean, _, batch_randn = sde.perturb_data(batch, t)
         perturbed_data = perturbed_data.type(torch.float32)
         mean = mean.type(torch.float32)

@@ -145,6 +145,7 @@ if __name__ == '__main__':
     # SDE
     p.add('--sde', choices=['vpsde', 'cld', 'passive', 'active'])
     p.add('--beta_type')
+    p.add('--max_time', type=float, default=1.0)
     # Linear beta params
     p.add('--beta0', type=float)
     p.add('--beta1', type=float)
