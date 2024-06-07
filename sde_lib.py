@@ -55,8 +55,8 @@ class CLD(nn.Module):
             '''
             Evaluating drift and diffusion of the ReverseSDE.
             '''
-            drift, diffusion = sde_fn(u, 1. - t)
-            score = score if score is not None else score_fn(u, 1. - t)
+            drift, diffusion = sde_fn(u, self.config.max_time - t)
+            score = score if score is not None else score_fn(u, self.config.max_time - t)
 
             drift_x, drift_v = torch.chunk(drift, 2, dim=1)
             _, diffusion_v = torch.chunk(diffusion, 2, dim=1)
