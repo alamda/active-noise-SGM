@@ -65,7 +65,7 @@ def get_ode_sampler(config, sde, sampling_shape, eps):
             global nfe_counter
             nfe_counter = 0
             time_tensor = torch.tensor(
-                [0., 1. - eps], dtype=torch.float64, device=config.device)
+                [0., config.max_time - eps], dtype=torch.float64, device=config.device)
             solution = odeint(ode_func,
                               u,
                               time_tensor,
@@ -113,7 +113,7 @@ def get_em_sampler(config, sde, sampling_shape, eps):
                     u = x
 
             n_discrete_steps = config.n_discrete_steps if not config.denoising else config.n_discrete_steps - 1
-            t_final = 1. - eps
+            t_final = config.max_time - eps
             t = torch.linspace(
                 0., t_final, n_discrete_steps + 1, dtype=torch.float64)
             if config.striding == 'linear':
@@ -145,7 +145,7 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
     gc.collect()
 
     n_discrete_steps = config.n_discrete_steps if not config.denoising else config.n_discrete_steps - 1
-    t_final = 1. - eps
+    t_final = config.max_time - eps
     t = torch.linspace(0., t_final, n_discrete_steps + 1, dtype=torch.float64)
     if config.striding == 'linear':
         pass
