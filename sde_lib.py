@@ -388,7 +388,7 @@ class ActiveDiffusion(CLD):
     
     def prior_sampling(self, shape):
         var_11 = 1/self.k * (self.Tp + self.Ta/(1+ self.k*self.tau))
-        var_12 = self.Ta/(2+ self.tau*self.k)
+        var_12 = self.Ta/(1 + self.tau*self.k)
         var_22 = self.Ta / self.tau
         
         zero_mean = torch.zeros(2, device=self.config.device)
