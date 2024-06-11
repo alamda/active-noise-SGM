@@ -77,7 +77,7 @@ def get_ode_sampler(config, sde, sampling_shape, eps):
             u = solution[-1]
 
             if config.denoising:
-                u = denoising_fn(model, u, 1. - eps)
+                u = denoising_fn(model, u, config.max_time - eps)
                 nfe_counter += 1
 
             if sde.is_augmented:
