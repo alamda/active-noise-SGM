@@ -326,6 +326,9 @@ class PassiveDiffusion(VPSDE):
         diffusion = torch.sqrt(2 * beta * self.Tp)
 
         return drift, diffusion
+
+    def prior_sampling(self, shape):
+        return (self.Tp / self.k ) * torch.randn(*shape, device=self.config.device), None
     
     def var(self, t, var0x=None): 
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
