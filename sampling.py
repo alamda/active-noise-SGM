@@ -126,7 +126,7 @@ def get_em_sampler(config, sde, sampling_shape, eps):
                 u, _ = step_fn(model, u, t[i], dt)
 
             if config.denoising:
-                _, u = step_fn(model, u, 1. - eps, eps)
+                _, u = step_fn(model, u, config.max_time - eps, eps)
 
             if sde.is_augmented:
                 x, v = torch.chunk(u, 2, dim=1)
@@ -164,7 +164,7 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
         return u_mean
 
     def compute_mean_of_analytical_dynamics(u, t, dt):
-        B = (beta_int_fn(1. - (t + dt)) - beta_int_fn(1. - t))
+        B = (beta_int_fn(config.max_time - (t + dt)) - beta_int_fn(config.max_time - t))
 
         x, v = torch.chunk(u, 2, dim=1)
         coeff = torch.exp(2. * sde.g * B)
@@ -174,7 +174,7 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
         return torch.cat((mean_x, mean_v), dim=1)
 
     def compute_variance_of_analytical_dynamics(t, dt):
-        B = beta_int_fn(1. - (t + dt)) - beta_int_fn(1. - t)
+        B = beta_int_fn(config.max_time - (t + dt)) - beta_int_fn(config.max_time - t)
         coeff = torch.exp(4. * sde.g * B)
         var_xx = coeff * (1. / coeff - 1. + 4. * sde.g *
                           B - 8. * sde.g**2 * B ** 2.)
@@ -218,10 +218,10 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
 
         score_fn = get_score_fn(config, sde, model, train=False)
         score = score_fn(u, torch.ones(
-            u.shape[0], device=u.device, dtype=torch.float64) * (1. - t))
+            u.shape[0], device=u.device, dtype=torch.float64) * (config.max_time - t))
 
         x, v = torch.chunk(u, 2, dim=1)
-        v_new = v + 2. * sde.f * (score + sde.m_inv * v) * beta_fn(1. - t) * dt
+        v_new = v + 2. * sde.f * (score + sde.m_inv * v) * beta_fn(config.max_time - t) * dt
 
         return torch.cat((x, v_new), dim=1)
 
@@ -249,7 +249,7 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
                 u = analytical_dynamics(u, t[i], dt, True)
 
             if config.denoising:
-                u = denoising_fn(model, u, 1.0 - eps)
+                u = denoising_fn(model, u, config.max_time - eps)
 
             x, v = torch.chunk(u, 2, dim=1)
             return x, v, config.n_discrete_steps

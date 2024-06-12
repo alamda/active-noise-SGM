@@ -228,8 +228,8 @@ class VPSDE(nn.Module):
         sde_fn = self.sde
 
         def reverse_sde(u, t, score=None):
-            drift, diffusion = sde_fn(u, 1. - t)
-            score = score if score is not None else score_fn(u, 1. - t)
+            drift, diffusion = sde_fn(u, self.config.max_time - t)
+            score = score if score is not None else score_fn(u, self.config.max_time - t)
 
             reverse_drift = -drift + diffusion**2 * \
                 score * (0.5 if probability_flow else 1.0)
