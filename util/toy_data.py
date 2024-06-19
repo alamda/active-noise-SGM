@@ -91,8 +91,6 @@ def inf_data_gen(dataset, batch_size):
         sigmas = np.array(sigma_list)
         weights = np.array(pi_list)/np.sum(np.array(pi_list))
 
-        
-
         index = np.random.choice(range(len(mu_list)), 
                                  size=batch_size, 
                                  replace=True,
