@@ -81,7 +81,49 @@ def inf_data_gen(dataset, batch_size):
 
         data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
         return torch.from_numpy(data.astype('float32'))
+    
+    if dataset == 'multigaussian_1D':     
+        mu_list = [-1.2, 1.2]
+        sigma_list = [0.5, 0.5]
+        pi_list = [0.5, 0.5]
+
+        means = np.array(mu_list)
+        sigmas = np.array(sigma_list)
+        weights = np.array(pi_list)/np.sum(np.array(pi_list))
+
+        
+
+        index = np.random.choice(range(len(mu_list)), 
+                                 size=batch_size, 
+                                 replace=True,
+                                 p=weights)
+        
+        noise = np.random.randn(batch_size, 1)
+
+        data = means[index] + noise.flatten() * sigmas[index]
+        
+        return torch.from_numpy(data.astype('float32'))
+    
+    if dataset == 'multigaussian_2D':
+        raise NotImplementedError(
+            'Toy dataset %s is not implemented.' % dataset)
 
     else:
         raise NotImplementedError(
             'Toy dataset %s is not implemented.' % dataset)
+
+if __name__=="__main__":
+    import matplotlib.pyplot as plt
+    
+    dataset = "multigaussian_1D"
+    batch_size = 1000
+    num_bins = 50
+    
+    sample = inf_data_gen(dataset, batch_size)
+    y_arr = np.zeros_like(sample)
+    
+    fig, ax = plt.subplots()
+
+    plt.hist(sample, bins=num_bins)
+    
+    plt.show()
