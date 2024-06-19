@@ -103,8 +103,38 @@ def inf_data_gen(dataset, batch_size):
         return torch.from_numpy(data.astype('float32'))
     
     if dataset == 'multigaussian_2D':
-        raise NotImplementedError(
-            'Toy dataset %s is not implemented.' % dataset)
+        mu_x_list = [-1.2, 1.2]
+        mu_y_list = [0., 0.]
+        sigma_list = [0.5, 0.5]
+        pi_list = [0.5, 0.5]
+
+        means_x = np.array(mu_x_list)
+        means_y = np.array(mu_y_list)
+        sigmas = np.array(sigma_list)
+        weights = np.array(pi_list)/np.sum(np.array(pi_list))
+
+        index_x = np.random.choice(range(len(mu_x_list)), 
+                                   size=batch_size, 
+                                   replace=True,
+                                   p=weights)
+        
+        index_y = np.random.choice(range(len(mu_y_list)), 
+                            size=batch_size, 
+                            replace=True,
+                            p=weights)
+        
+        noise_x = np.random.randn(batch_size, 1)
+        noise_y = np.random.randn(batch_size, 1)
+
+        data_x = means_x[index_x] + noise_x.flatten() * sigmas[index_x]
+        data_y = means_y[index_y] + noise_y.flatten() * sigmas[index_y]
+        
+        data_x = torch.from_numpy(data_x.reshape((-1, 1)))
+        data_y = torch.from_numpy(data_y.reshape((-1, 1)))
+        
+        data = torch.cat((data_x, data_y), dim=1)
+        
+        return data
 
     else:
         raise NotImplementedError(
@@ -113,15 +143,23 @@ def inf_data_gen(dataset, batch_size):
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
-    dataset = "multigaussian_1D"
+    dataset = "multigaussian_2D"
     batch_size = 1000
     num_bins = 50
     
-    sample = inf_data_gen(dataset, batch_size)
-    y_arr = np.zeros_like(sample)
-    
     fig, ax = plt.subplots()
-
-    plt.hist(sample, bins=num_bins)
     
-    plt.show()
+    if dataset == "multigaussian_1D":
+        sample = inf_data_gen(dataset, batch_size)
+        y_arr = np.zeros_like(sample)
+        
+        plt.hist(sample, bins=num_bins)
+        
+        plt.show()
+    
+    elif dataset == "multigaussian_2D":
+        sample = inf_data_gen(dataset, batch_size)
+        
+        ax.hist2d(sample[:,0], sample[:,1])
+        
+        plt.show()
