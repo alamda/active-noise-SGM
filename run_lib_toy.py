@@ -169,7 +169,11 @@ def train(config, workdir):
             this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
             make_dir(this_sample_dir)
 
-            plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
+            if config.dataset == "multigaussian_1D":
+                plt.hist(x.cpu().numpy(), bins=50, range=(-2.5, 2.5))
+            else:
+                plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
+            
             plt.savefig(os.path.join(this_sample_dir,
                         'sample_rank_%d.png' % global_rank))
             plt.close()
