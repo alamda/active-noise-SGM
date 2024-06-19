@@ -46,7 +46,11 @@ class MLP(nn.Module):
                                   nn.Linear(hidden_dim, out_dim))
 
     def forward(self, u, t):
-        h = torch.cat([u, t.reshape(-1, 1)], dim=1)
+        if len(u.shape) > 1:
+            h = torch.cat([u, t.reshape(-1, 1)], dim=1)
+        else:
+            h = torch.cat([u.reshape(-1,1), t.reshape(-1,1)], dim=1)
+
         output = self.main(h)
 
         return output

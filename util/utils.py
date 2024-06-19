@@ -281,9 +281,11 @@ def build_beta_int_fn(config):
     return beta_int_fn
 
 
-def add_dimensions(x, is_image):
+def add_dimensions(x, is_image, dim=None):
     if is_image:
         return x[:, None, None, None]
+    elif dim == 1:
+        return x[:, None].flatten()
     else:
         return x[:, None]
 

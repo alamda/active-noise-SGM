@@ -37,14 +37,24 @@ class CLD(nn.Module):
         Evaluating drift and diffusion of the SDE.
         '''
         x, v = torch.chunk(u, 2, dim=1)
+        
+        if self.config.data_dim == 1:
+            x = x.flatten()
+            v = v.flatten()
 
-        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
 
         drift_x = self.m_inv * beta * v
         drift_v = -beta * x - self.f * self.m_inv * beta * v
 
         diffusion_x = torch.zeros_like(x)
         diffusion_v = torch.sqrt(2. * self.f * beta) * torch.ones_like(v)
+        
+        if self.config.data_dim == 1:
+            drift_x = drift_x.reshape((-1,1))
+            drift_v = drift_v.reshape((-1,1))
+            diffusion_x = diffusion_x.reshape((-1,1))
+            diffusion_v = diffusion_v.reshape((-1,1))
 
         return torch.cat((drift_x, drift_v), dim=1), torch.cat((diffusion_x, diffusion_v), dim=1)
 
@@ -57,10 +67,15 @@ class CLD(nn.Module):
             '''
             drift, diffusion = sde_fn(u, self.config.max_time - t)
             score = score if score is not None else score_fn(u, self.config.max_time - t)
-
+            
             drift_x, drift_v = torch.chunk(drift, 2, dim=1)
             _, diffusion_v = torch.chunk(diffusion, 2, dim=1)
 
+            if self.config.data_dim == 1:
+                drift_x = drift_x.flatten()
+                drift_v = drift_v.flatten()
+                diffusion_v = diffusion_v.flatten()
+            
             reverse_drift_x = -drift_x
             reverse_drift_v = -drift_v + diffusion_v ** 2. * \
                 score * (0.5 if probability_flow else 1.)
@@ -68,7 +83,13 @@ class CLD(nn.Module):
             reverse_diffusion_x = torch.zeros_like(diffusion_v)
             reverse_diffusion_v = torch.zeros_like(
                 diffusion_v) if probability_flow else diffusion_v
-
+            
+            if self.config.data_dim == 1:
+                reverse_drift_x = reverse_drift_x.reshape((-1,1))
+                reverse_drift_v = reverse_drift_v.reshape((-1,1))
+                reverse_diffusion_x = reverse_diffusion_x.reshape((-1,1))
+                reverse_diffusion_v = reverse_diffusion_v.reshape((-1,1))
+                
             return torch.cat((reverse_drift_x, reverse_drift_v), dim=1), torch.cat((reverse_diffusion_x, reverse_diffusion_v), dim=1)
 
         return reverse_sde
@@ -91,13 +112,22 @@ class CLD(nn.Module):
         Evaluating the mean of the conditional perturbation kernel.
         '''
         x, v = torch.chunk(u, 2, dim=1)
+        
+        if self.config.data_dim == 1:
+            x = x.flatten()
+            v = v.flatten()
 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         coeff_mean = torch.exp(-2. * beta_int * self.g)
 
         mean_x = coeff_mean * (2. * beta_int * self.g *
                                x + 4. * beta_int * self.g ** 2. * v + x)
         mean_v = coeff_mean * (-beta_int * x - 2. * beta_int * self.g * v + v)
+        
+        if self.config.data_dim == 1:
+            mean_x = mean_x.reshape((-1,1))
+            mean_v = mean_v.reshape((-1,1))
+            
         return torch.cat((mean_x, mean_v), dim=1)
 
     def var(self, t, var0x=None, var0v=None):
@@ -106,7 +136,7 @@ class CLD(nn.Module):
         '''
         if var0x is None:
             var0x = add_dimensions(torch.zeros_like(
-                t, dtype=torch.float64, device=t.device), self.config.is_image)
+                t, dtype=torch.float64, device=t.device), self.config.is_image, dim=self.config.data_dim)
         if var0v is None:
             if self.config.cld_objective == 'dsm':
                 var0v = torch.zeros_like(
@@ -115,9 +145,9 @@ class CLD(nn.Module):
                 var0v = (self.gamma / self.m_inv) * torch.ones_like(t,
                                                                     dtype=torch.float64, device=t.device)
 
-            var0v = add_dimensions(var0v, self.config.is_image)
+            var0v = add_dimensions(var0v, self.config.is_image, dim=self.config.data_dim)
 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         multiplier = torch.exp(-4. * beta_int * self.g)
 
         var_xx = var0x + (1. / multiplier) - 1. + 4. * beta_int * self.g * (var0x - 1.) + 4. * \
@@ -169,9 +199,17 @@ class CLD(nn.Module):
 
         batch_randn = torch.randn_like(batch, device=batch.device)
         batch_randn_x, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
+        
+        if self.config.data_dim == 1:
+            batch_randn_x = batch_randn_x.flatten()
+            batch_randn_v = batch_randn_v.flatten()
 
         noise_x = cholesky11 * batch_randn_x
         noise_v = cholesky21 * batch_randn_x + cholesky22 * batch_randn_v
+        
+        if self.config.data_dim == 1:
+            noise_x = noise_x.reshape((-1,1))
+            noise_v = noise_v.reshape((-1,1))
         noise = torch.cat((noise_x, noise_v), dim=1)
 
         perturbed_data = mean + noise
@@ -216,8 +254,11 @@ class VPSDE(nn.Module):
         return False
 
     def sde(self, u, t):
-        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
 
+        if self.config.data_dim == 1:
+            u = u.flatten()
+            
         drift = -0.5 * beta * u
         diffusion = torch.sqrt(beta) * torch.ones_like(u,
                                                        device=self.config.device)
@@ -251,15 +292,15 @@ class VPSDE(nn.Module):
     def var(self, t, var0x=None):
         if var0x is None:
             var0x = add_dimensions(torch.zeros_like(
-                t, dtype=torch.float64, device=t.device), self.config.is_image)
+                t, dtype=torch.float64, device=t.device), self.config.is_image, dim=self.config.data_dim)
 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
 
         coeff = torch.exp(-beta_int)
         return [1. - (1. - var0x) * coeff]
 
     def mean(self, x, t):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
 
         return x * torch.exp(-0.5 * beta_int)
 
@@ -279,6 +320,9 @@ class VPSDE(nn.Module):
     def perturb_data(self, batch, t, var0x=None):
         mean, var = self.mean_and_var(batch, t, var0x)
         cholesky = torch.sqrt(var[0])
+        
+        if self.config.data_dim == 1:
+            cholesky = cholesky.flatten()
 
         batch_randn = torch.randn_like(batch, device=batch.device)
         noise = cholesky * batch_randn
@@ -300,7 +344,10 @@ class VPSDE(nn.Module):
 
             drift *= dt
             diffusion *= np.sqrt(dt)
-
+            
+            if self.config.data_dim == 1:
+                u = u.flatten()
+            
             noise = torch.randn_like(u, device=u.device)
             u_mean = u + drift
             u = u_mean + diffusion * noise
@@ -319,8 +366,11 @@ class PassiveDiffusion(VPSDE):
         return 'passive'
     
     def sde(self, u, t):
-        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
         
+        if self.config.data_dim == 1:
+            u = u.flatten()
+            
         drift = - self.k * beta * u
         
         diffusion = torch.sqrt(2 * beta * self.Tp)
@@ -331,7 +381,7 @@ class PassiveDiffusion(VPSDE):
         return np.sqrt(self.Tp / self.k ) * torch.randn(*shape, device=self.config.device), None
     
     def var(self, t, var0x=None): 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
 
         a = torch.exp(-self.k * beta_int)
         
@@ -339,8 +389,8 @@ class PassiveDiffusion(VPSDE):
         return [var]
     
     def mean(self, x, t):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
-        
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+
         a = torch.exp(-self.k * beta_int)
         
         mean_x = a * x
@@ -367,7 +417,7 @@ class ActiveDiffusion(CLD):
         return 'active'
     
     def sde(self, u, t):
-        beta = add_dimensions(self.beta_fn(t), self.config.is_image)
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
         
         k = self.k
         tau = self.tau
@@ -376,16 +426,27 @@ class ActiveDiffusion(CLD):
 
         x, eta = torch.chunk(u, 2, dim=1)
         
-        x = torch.reshape(x, (-1,2))
-        eta = torch.reshape(eta, (-1,2))
-                                
+        if self.config.data_dim == 2:
+            x = torch.reshape(x, (-1,2))
+            eta = torch.reshape(eta, (-1,2))
+        elif self.config.data_dim == 1:
+            x = x.flatten()
+            eta = eta.flatten()
+        
         drift_x = - k * beta * x + beta*eta
         drift_eta =  - beta *eta / tau
         
         diffusion_x = torch.sqrt(2 * beta * Tp) * torch.ones_like(x)
         
         diffusion_eta = 1 / tau * torch.sqrt(2 * beta * Ta) * torch.ones_like(eta)
-                                      
+        
+        if self.config.data_dim == 1:
+            drift_x = drift_x.reshape((-1,1))
+            drift_eta = drift_eta.reshape((-1,1))
+            
+            diffusion_x = diffusion_x.reshape((-1,1))
+            diffusion_eta = diffusion_eta.reshape((-1,1))
+                                              
         return torch.cat((drift_x, drift_eta), dim=1), \
                torch.cat((diffusion_x, diffusion_eta), dim=1)
     
@@ -407,13 +468,17 @@ class ActiveDiffusion(CLD):
         sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=1)
         sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=1)
         
-        sample_x = torch.cat((sample_1x, sample_2x), dim=1)
-        sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
+        if self.config.data_dim == 2:
+            sample_x = torch.cat((sample_1x, sample_2x), dim=1)
+            sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
+        if self.config.data_dim == 1:
+            sample_x = sample_1x
+            sample_eta = sample_1eta
         
         return sample_x, sample_eta
     
     def var(self, t, var0x=None, var0v=None):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         
         k = self.k      
         w = 1 / self.tau
@@ -437,7 +502,7 @@ class ActiveDiffusion(CLD):
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
     
     def mean(self, batch, t):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         
         k = self.k
         w = 1/self.tau
@@ -448,8 +513,16 @@ class ActiveDiffusion(CLD):
         
         batch_x, batch_eta = torch.chunk(batch, 2, dim=1)
         
+        if self.config.data_dim == 1:
+            batch_x = batch_x.flatten()
+            batch_eta = batch_eta.flatten()
+        
         mean_x = a * batch_x + b * batch_eta
         mean_eta = c * batch_eta
+        
+        if self.config.data_dim == 1:
+            mean_x = mean_x.reshape((-1,1))
+            mean_eta = mean_eta.reshape((-1,1))
                 
         return torch.cat((mean_x, mean_eta), dim=1)
     

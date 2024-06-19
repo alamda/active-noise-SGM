@@ -31,6 +31,9 @@ def get_loss_fn(sde, train, config):
                 elif config.sde == 'active':
                     v = np.sqrt(config.Ta / config.tau) * \
                         torch.normal(torch.zeros_like(x), torch.ones_like(x))
+                if config.data_dim == 1:
+                    x = x.reshape((-1, 1))
+                    v = v.reshape((-1,1))
                 batch = torch.cat((x, v), dim=1)
             else:
                 raise NotImplementedError(
@@ -48,7 +51,10 @@ def get_loss_fn(sde, train, config):
         if sde.is_augmented:
             _, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
             batch_randn = batch_randn_v
-
+            
+            if config.data_dim == 1:
+                batch_randn = batch_randn.flatten()
+        
         score_fn = mutils.get_score_fn(config, sde, model, train)
         score = score_fn(perturbed_data, t)
 

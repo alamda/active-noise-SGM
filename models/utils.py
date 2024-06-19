@@ -57,6 +57,8 @@ def get_score_fn(config, sde, model, train=False):
 
     def score_fn(u, t):
         score = model_fn(u.type(torch.float32), t.type(torch.float32))
+        if config.data_dim == 1:
+            score = score.flatten()
         noise_multiplier = sde.noise_multiplier(t).type(torch.float32)
 
         if config.mixed_score:
