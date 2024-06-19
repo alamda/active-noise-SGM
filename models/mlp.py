@@ -14,7 +14,7 @@ from . import utils
 class MLP(nn.Module):
     def __init__(self,
                  config,
-                 input_dim=2,
+                 input_dim=None,
                  index_dim=1,
                  hidden_dim=128):
 
@@ -24,6 +24,9 @@ class MLP(nn.Module):
 
         self.x_input = True
         self.v_input = True if config.sde in ('cld', 'active') else False
+
+        if input_dim is None:
+            input_dim = config.data_dim
 
         if self.x_input and self.v_input:
             in_dim = input_dim * 2 + index_dim
