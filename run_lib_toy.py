@@ -168,11 +168,35 @@ def train(config, workdir):
 
             this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
             make_dir(this_sample_dir)
-
+            
+            fig, ax = plt.subplots()
+            
+            ax.set_aspect('equal')
+            
             if config.dataset == "multigaussian_1D":
-                plt.hist(x.cpu().numpy(), bins=50, range=(-2.5, 2.5))
+                ax.hist(x.cpu().numpy().flatten(), bins=50, range=(-2.5, 2.5))
+            elif config.dataset == "multigaussian_2D":
+                ax.set_xlim(-3, 3)
+                ax.set_ylim(-1.5, 1.5)
+                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
+                           alpha=0.1, c="green", edgecolor=None, s=3)
+            elif config.dataset in ("diamond", "multimodal_swissroll"):
+                ax.set_xlim(-1, 1)
+                ax.set_ylim(-1, 1)
+                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
+                           alpha=0.1, c="green", edgecolor=None, s=3)
+            elif config.dataset == "swissroll":
+                ax.set_xlim(-0.25, 0.25)
+                ax.set_ylim(-0.25, 0.25)
+                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
+                           alpha=0.1, c="green", edgecolor=None, s=3)
+            elif config.dataset == "multimodal_swissroll_overlap":
+                ax.set_xlim(-0.5, 0.5)
+                ax.set_ylim(-0.5, 0.5)
+                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
+                           alpha=0.1, c="green", edgecolor=None, s=3)
             else:
-                plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
+                ax.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
             
             plt.savefig(os.path.join(this_sample_dir,
                         'sample_rank_%d.png' % global_rank))
