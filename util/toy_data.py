@@ -29,9 +29,12 @@ def inf_data_gen(dataset, batch_size):
         data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
         return torch.from_numpy(data.astype('float32'))
 
-    elif dataset == 'diamond':
+    elif dataset in ('diamond', 'diamond_close'):
         WIDTH = 3
-        BOUND = 0.5
+        if dataset == 'diamond':
+            BOUND = 0.5
+        elif dataset == 'diamond_close':
+            BOUND = 0.1
         NOISE = 0.04
         ROTATION_MATRIX = np.array([[1., -1.], [1., 1.]]) / np.sqrt(2.)
 
@@ -102,8 +105,11 @@ def inf_data_gen(dataset, batch_size):
         
         return torch.from_numpy(data.astype('float32'))
     
-    if dataset == 'multigaussian_2D':
-        mu_x_list = [-1.2, 1.2]
+    if dataset in ('multigaussian_2D', 'multigaussian_2D_closer'):
+        if dataset == 'multigaussian_2D':
+            mu_x_list = [-1.2, 1.2]
+        elif dataset == 'multigaussian_2D_closer':
+            mu_x_list = [-1.0, 1.0]
         mu_y_list = [0., 0.]
         sigma_list = [0.5, 0.5]
         pi_list = [0.5, 0.5]
