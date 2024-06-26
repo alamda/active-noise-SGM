@@ -349,6 +349,44 @@ def evaluate(config, workdir):
         # x, _, nfe = sampling_fn(score_model)
         # logging.info('NFE: %d' % nfe)
 
-            plt.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
-            plt.savefig(os.path.join(sample_dir, 'sample_%d.png' % global_rank))
+            fig, ax = plt.subplots()
+            
+            ax.set_aspect('equal')
+            
+            lim_dict = {'multigaussian_2D':
+                    {'xlim': (-3, 3),
+                     'ylim': (-1.5, 1.5)},
+                'multigaussian_2D_close':
+                    {'xlim': (-3, 3),
+                     'ylim': (-1.5, 1.5)},
+                'diamond':                  
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'diamond_close':            
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'swissroll':                
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'multimodal_swissroll_overlap':
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)} ,
+                'multimodal_swissroll':                  
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)} 
+                }
+            
+            if config.dataset == "multigaussian_1D":
+                ax.hist(x.cpu().numpy().flatten(), bins=50, range=(-2.5, 2.5))
+            elif config.dataset in lim_dict.keys():
+                ax.set_xlim(lim_dict[config.dataset]['xlim'])
+                ax.set_ylim(lim_dict[config.dataset]['ylim'])
+                
+                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
+                           alpha=0.1, c="green", edgecolor=None, s=3)
+            else:
+                ax.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
+            
+            plt.savefig(os.path.join(sample_dir,
+                        'sample_rank_%d.png' % global_rank))
             plt.close()
