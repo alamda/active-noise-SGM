@@ -34,7 +34,7 @@ def inf_data_gen(dataset, batch_size):
         if dataset == 'diamond':
             BOUND = 0.5
         elif dataset == 'diamond_close':
-            BOUND = 0.1
+            BOUND = 0.2
         NOISE = 0.04
         ROTATION_MATRIX = np.array([[1., -1.], [1., 1.]]) / np.sqrt(2.)
 
