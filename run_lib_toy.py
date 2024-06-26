@@ -173,26 +173,35 @@ def train(config, workdir):
             
             ax.set_aspect('equal')
             
+            lim_dict = {'multigaussian_2D':
+                    {'xlim': (-3, 3),
+                     'ylim': (-1.5, 1.5)},
+                'multigaussian_2D_close':
+                    {'xlim': (-3, 3),
+                     'ylim': (-1.5, 1.5)},
+                'diamond':                  
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'diamond_close':            
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'swissroll':                
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)},
+                'multimodal_swissroll_overlap':
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)} ,
+                'multimodal_swissroll':                  
+                    {'xlim': (-1, 1),
+                     'ylim': (-1, 1)} 
+                }
+            
             if config.dataset == "multigaussian_1D":
                 ax.hist(x.cpu().numpy().flatten(), bins=50, range=(-2.5, 2.5))
-            elif config.dataset == "multigaussian_2D":
-                ax.set_xlim(-3, 3)
-                ax.set_ylim(-1.5, 1.5)
-                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
-                           alpha=0.1, c="green", edgecolor=None, s=3)
-            elif config.dataset in ("diamond", "multimodal_swissroll"):
-                ax.set_xlim(-1, 1)
-                ax.set_ylim(-1, 1)
-                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
-                           alpha=0.1, c="green", edgecolor=None, s=3)
-            elif config.dataset == "swissroll":
-                ax.set_xlim(-0.25, 0.25)
-                ax.set_ylim(-0.25, 0.25)
-                ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
-                           alpha=0.1, c="green", edgecolor=None, s=3)
-            elif config.dataset == "multimodal_swissroll_overlap":
-                ax.set_xlim(-0.5, 0.5)
-                ax.set_ylim(-0.5, 0.5)
+            elif config.dataset in lim_dict.keys():
+                ax.set_xlim(lim_dict[config.dataset]['xlim'])
+                ax.set_ylim(lim_dict[config.dataset]['ylim'])
+                
                 ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
                            alpha=0.1, c="green", edgecolor=None, s=3)
             else:
