@@ -105,10 +105,10 @@ def inf_data_gen(dataset, batch_size):
         
         return torch.from_numpy(data.astype('float32'))
     
-    if dataset in ('multigaussian_2D', 'multigaussian_2D_closer'):
+    if dataset in ('multigaussian_2D', 'multigaussian_2D_close'):
         if dataset == 'multigaussian_2D':
             mu_x_list = [-1.2, 1.2]
-        elif dataset == 'multigaussian_2D_closer':
+        elif dataset == 'multigaussian_2D_close':
             mu_x_list = [-1.0, 1.0]
         mu_y_list = [0., 0.]
         sigma_list = [0.5, 0.5]
