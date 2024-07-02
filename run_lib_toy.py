@@ -26,6 +26,8 @@ import sde_lib
 import sampling
 import likelihood
 from util.toy_data import inf_data_gen
+from models.utils import get_score_fn
+from torchdiffeq import odeint
 
 
 def train(config, workdir):
@@ -390,3 +392,186 @@ def evaluate(config, workdir):
             plt.savefig(os.path.join(sample_dir,
                         'sample_rank_%d.png' % global_rank))
             plt.close()
+
+def reverse_forces(config, workdir):
+    ''' Visualization of reverse diffusion forces. '''
+
+    local_rank = config.local_rank
+    global_rank = config.global_rank
+    set_seeds(global_rank, config.seed + config.eval_seed)
+
+    torch.cuda.device(local_rank)
+    config.device = torch.device('cuda:%d' % local_rank)
+
+    checkpoint_dir = os.path.join(workdir, 'checkpoints')
+    eval_dir = os.path.join(workdir, config.eval_folder)
+    sample_dir = os.path.join(eval_dir, 'samples')
+    if global_rank == 0:
+        logging.info(config)
+        make_dir(sample_dir)
+    dist.barrier()
+
+    beta_fn = build_beta_fn(config)
+    beta_int_fn = build_beta_int_fn(config)
+
+    if config.sde == 'vpsde':
+        sde = sde_lib.VPSDE(config, beta_fn, beta_int_fn)
+    elif config.sde == 'cld':
+        sde = sde_lib.CLD(config, beta_fn, beta_int_fn)
+    elif config.sde == 'passive':
+        sde = sde_lib.PassiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'active':
+        sde = sde_lib.ActiveDiffusion(config, beta_fn, beta_int_fn)
+    else:
+        raise NotImplementedError('SDE %s is unknown.' % config.sde)
+
+    score_model = mutils.create_model(config).to(config.device)
+    broadcast_params(score_model.parameters())
+    score_model = DDP(score_model, device_ids=[local_rank])
+    ema = ExponentialMovingAverage(
+        score_model.parameters(), decay=config.ema_rate)
+
+    optim_params = score_model.parameters()
+    optimizer = get_optimizer(config, optim_params)
+    state = dict(optimizer=optimizer, model=score_model, ema=ema, step=0)
+
+    optimize_fn = optimization_manager(config)
+    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config)
+
+    sampling_shape = (config.sampling_batch_size,
+                      config.data_dim)
+    sampling_fn = sampling.get_sampling_fn(
+        config, sde, sampling_shape, config.sampling_eps)
+
+    likelihood_fn = likelihood.get_likelihood_fn(config, sde)
+
+    ckpt_path = os.path.join(checkpoint_dir, config.ckpt_file)
+    state = restore_checkpoint(ckpt_path, state, device=config.device)
+    ema.copy_to(score_model.parameters())
+           
+    def probability_flow_ode(model, u, t):
+        ''' 
+        The "Right-Hand Side" of the ODE. 
+        '''
+        score_fn = get_score_fn(config, sde, model, train=False)
+        rsde = sde.get_reverse_sde(score_fn, probability_flow=True)
+        return rsde(u, t)[0] # return reverse drift
+
+    def denoising_fn(model, u, t):
+        score_fn = get_score_fn(config, sde, model, train=False)
+        discrete_step_fn = sde.get_discrete_step_fn(
+            mode='reverse', score_fn=score_fn)
+        u, u_mean = discrete_step_fn(u, t, eps)
+        return u_mean
+
+    def ode_sampler(model, u=None, time_arr=None, t_start=None, t_end=None):
+        with torch.no_grad():
+            if u is None:
+                x, v = sde.prior_sampling(sampling_shape)
+                if sde.is_augmented:
+                    u = torch.cat((x, v), dim=1)
+                else:
+                    u = x
+
+            def ode_func(t, u):
+                global nfe_counter
+                nfe_counter += 1
+                vec_t = torch.ones(
+                    sampling_shape[0], device=u.device, dtype=torch.float64) * t
+                dudt = probability_flow_ode(model, u, vec_t)
+                return dudt
+
+            global nfe_counter
+            nfe_counter = 0
+            
+            if time_arr is None and t_start is not None and t_end is not None:
+                time_tensor = torch.tensor(
+                    [0, t_end-t_start], dtype=torch.float64, device=config.device)
+            else:
+                time_tensor = torch.tensor(
+                    time_arr, dtype=torch.float64, device=config.device
+                )
+            solution = odeint(ode_func,
+                              u,
+                              time_tensor,
+                              rtol=config.sampling_rtol,
+                              atol=config.sampling_atol,
+                              method=config.sampling_solver,
+                              options=config.sampling_solver_options)
+            
+            if config.denoising:
+                for step_idx, u in enumerate(solution):
+                    u = denoising_fn(model, u, config.max_time - eps)
+                    nfe_counter += 1
+                    
+                    solution[step_idx] = u
+            
+            return solution
+    
+    def ode_func(t, u):
+        global nfe_counter
+        nfe_counter += 1
+        vec_t = torch.ones(
+            sampling_shape[0], device=u.device, dtype=torch.float64) * t
+        dudt = probability_flow_ode(score_model, u, vec_t)
+        return dudt
+    
+    time_step = config.sampling_eps
+    num_time_steps = 1000
+    time_arr = np.linspace(0, config.max_time - time_step, num_time_steps)
+    u=None
+
+    score_fn = get_score_fn(config, sde, score_model, train=False)
+
+    t_start = 0
+    t_end = config.max_time
+    solution = ode_sampler(score_model, u, time_arr=time_arr)
+
+    score_mean = []
+    score_std = []
+
+    for idx, u in enumerate(solution):
+        
+        if idx%10 == 0: # and idx > int(num_time_steps*0.9):
+            vec_t = torch.ones(sampling_shape[0], 
+                               device=u.device, 
+                               dtype=torch.float64) * \
+                                   time_arr[idx]
+    
+            score_u = score_fn(u, vec_t)
+            # _, diffusion = sde.sde(u, vec_t)
+            
+            fig, ax = plt.subplots()
+            # ax.set_aspect('equal')
+            time = "{:0.2f}".format(time_arr[idx])
+
+            ax.set_title(f"{config.sde}, {config.dataset}, t={time}")
+            ax.set_ylim(0,1)
+            ax.set_xlim(-5, 5)
+            fake_x_arr = np.linspace(-5, 5, 10000)
+            fake_y_arr = np.exp(-(fake_x_arr)**2)/np.sqrt(2*np.pi)
+            if sde.is_augmented:
+                x, v = torch.chunk(u, 2, dim=1)
+                # _, score = torch.chunk(score_u, 2, dim=1)
+                # score = score.cpu().detach().numpy()
+                # print(score.shape)
+                XY = v.cpu().detach().numpy()
+            else:
+                x = u
+                XY = x.cpu().detach().numpy()
+            score = score_u.cpu().detach().numpy()
+
+            # ax.scatter(x[:,0].cpu().detach().numpy(), x[:,1].cpu().detach().numpy())
+            # ax.quiver(XY[:,0], XY[:,1], score[:,0], score[:,1])
+            # score_x_mean = torch.mean(score_u[:,0])
+            ax.plot(fake_x_arr, fake_y_arr, label="N(0,I)", color='black')
+            ax.hist(np.array(score[:,0]), bins = 50, density=True, range=(-5, 5), label="x", alpha=0.5)
+            ax.hist(np.array(score[:,1]), bins = 50, density=True, range=(-5, 5), label="y", alpha=0.5)
+            ax.legend()
+            # plt.show()
+            
+            time = "{:0.2f}".format(time_arr[idx])
+            fname = f"{config.sde}_{config.dataset}_t{time}.png"
+            
+            plt.savefig(fname)
+    

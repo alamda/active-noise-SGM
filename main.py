@@ -105,7 +105,26 @@ def main(config):
             else:
                 import run_lib_toy
                 run_lib_toy.train(config, workdir)
+    
+    elif config.mode == 'reverse_forces':
+        if os.path.exists(workdir):
+            if config.global_rank == 0:
+                if config.eval_folder is None:
+                    raise ValueError('Need to set eval folder.')
+                eval_dir = os.path.join(workdir, config.eval_folder)
+                make_dir(eval_dir)
+                gfile_stream = open(os.path.join(eval_dir, 'stdout.txt'), 'w')
+                set_logger(gfile_stream)
 
+            if config.is_image:
+                import run_lib
+                run_lib.reverse_forces(config, workdir)
+            else:
+                import run_lib_toy
+                run_lib_toy.reverse_forces(config, workdir)
+        else:
+            raise ValueError('No experiment to evaluate.')
+    
     else:
         raise ValueError('Mode not recognized.')
 
@@ -118,7 +137,7 @@ if __name__ == '__main__':
     p.add('--root')
     p.add('--workdir', required=True)
     p.add('--eval_folder', default=None)
-    p.add('--mode', choices=['train', 'eval', 'continue'], required=True)
+    p.add('--mode', choices=['train', 'eval', 'continue', 'reverse_forces'], required=True)
     p.add('--cont_nbr', type=int, default=None)
     p.add('--checkpoint', default=None)
 
