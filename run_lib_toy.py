@@ -575,3 +575,4 @@ def reverse_forces(config, workdir):
             
             plt.savefig(fname)
     
+            plt.close()
