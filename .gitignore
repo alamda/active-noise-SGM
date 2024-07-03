@@ -2,6 +2,8 @@ __pycache__/
 simulations*/*
 progress.out
 score_hist/* 
+misc/*.png
+misc/*.gif
 
 #Simulations subdirectories
 vpsde_*/
