@@ -136,7 +136,7 @@ def train(config, workdir):
             step + 1, config.likelihood_threshold)
         config.save_threshold = max(step + 1, config.save_threshold)
 
-    while step < num_total_iter:
+    while step <= num_total_iter:
         if step % config.likelihood_freq == 0 and step >= config.likelihood_threshold:
             ema.store(score_model.parameters())
             ema.copy_to(score_model.parameters())
