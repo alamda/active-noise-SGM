@@ -162,7 +162,7 @@ if __name__ == '__main__':
     p.add('--data_location', default=None)
 
     # SDE
-    p.add('--sde', choices=['vpsde', 'cld', 'passive', 'active'])
+    p.add('--sde', choices=['vpsde', 'cld', 'passive', 'active', 'chiral_active'])
     p.add('--beta_type')
     p.add('--max_time', type=float, default=1.0)
     # Linear beta params
@@ -178,6 +178,7 @@ if __name__ == '__main__':
     p.add('--Ta', type=float)
     p.add('--k', type=float, default=1.0)
     p.add('--tau', type=float)
+    p.add('--omega', type=float)
 
     # Optimization
     p.add('--optimizer')

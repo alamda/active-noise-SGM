@@ -529,3 +529,269 @@ class ActiveDiffusion(CLD):
     def loss_multiplier(self, t):
         beta = self.beta_fn(t)
         return self.Ta * beta / self.tau**2
+    
+    
+class ChiralActiveDiffusion(CLD):
+    def __init__(self, config, beta_fn, beta_int_fn):
+        config.m_inv = 1
+        
+        super().__init__(config, beta_fn, beta_int_fn)
+        
+        self.Tp = config.Tp
+        self.Ta = config.Ta
+        self.tau = config.tau
+        self.k = config.k
+        self.omega = config.omega
+    
+    @property
+    def type(self):
+        return 'active'
+    
+    def sde(self, u, t):
+        beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
+        
+        k = self.k
+        tau = self.tau
+        Tp = self.Tp
+        Ta = self.Ta
+        omega = self.omega
+        
+
+        x, eta = torch.chunk(u, 2, dim=1)
+        
+        if self.config.data_dim == 2:
+            x = torch.reshape(x, (-1,2))
+            eta = torch.reshape(eta, (-1,2))
+        elif self.config.data_dim == 1:
+            x = x.flatten()
+            eta = eta.flatten()
+            
+        M = torch.tensor([[tau, omega],
+                          [-omega, 1/tau]],
+                         device=self.config.device)
+        
+        drift_x = - k * beta * x + beta*eta
+        drift_eta =  - beta * M *eta
+        
+        diffusion_x = torch.sqrt(2 * beta * Tp) * torch.ones_like(x)
+        
+        diffusion_eta = 1 / tau * torch.sqrt(2 * beta * Ta) * torch.ones_like(eta)
+        
+        if self.config.data_dim == 1:
+            drift_x = drift_x.reshape((-1,1))
+            drift_eta = drift_eta.reshape((-1,1))
+            
+            diffusion_x = diffusion_x.reshape((-1,1))
+            diffusion_eta = diffusion_eta.reshape((-1,1))
+                                              
+        return torch.cat((drift_x, drift_eta), dim=1), \
+               torch.cat((diffusion_x, diffusion_eta), dim=1)
+    
+    def prior_sampling(self, shape):
+        
+        k = self.k
+        tau = self.tau
+        omega = self.omega
+        Tp = self.Tp
+        Ta = self.Ta
+        
+        K = k * tau
+        Omega = omega * tau
+        kappa_plus = 1 + K
+        kappa_minus = 1 - K
+        
+        m11 = 1/k * (Tp + Ta * kappa_plus / (kappa_plus**2 + Omega**2) )
+        m12 = Ta * kappa_plus / (kappa_plus**2 + Omega**2)
+        m22 = Ta / tau
+        
+        u12 = Ta * Omega / (kappa_plus**2 + Omega**2)
+        
+        I_mat = torch.eye(2)
+        e_mat = torch.tensor([[0,1],[-1,0]])
+        
+        C11 = (m11*I_mat).tolist()
+        C12 = (m12*I_mat + u12*e_mat).tolist()
+        C21 = (m12*I_mat - u12*e_mat).tolist()
+        C22 = (m22*I_mat).tolist()
+        
+        covar = torch.tensor([ C11[0], C12[0], 
+                                C11[1], C12[1], 
+                                C21[0], C22[0], 
+                                C21[1], C22[1] ])                         
+
+        covar = covar.reshape((4,4))
+    
+        zero_mean = torch.zeros(4)
+
+        sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
+        
+        sample = sampler.sample()
+        
+        sample_x, sample_eta = torch.chunk(sample, 2)
+        
+        return sample_x, sample_eta
+    
+    def var(self, t, var0x=None, var0v=None):
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        
+        k = self.k      
+        tau = self.tau
+        omega = self.omega
+        Tp = self.Tp
+        Ta = self.Ta
+        
+        a = torch.exp(-k*beta_int)
+        b = torch.exp(-beta_int/tau)
+        K = k * tau
+        Omega = omega*tau
+        kappa_plus = 1 + K
+        kappa_minus = 1 - K
+
+
+        M11 = (Tp/k)*(1-a**2) + \
+                ((Ta / k) / ((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2))) * \
+                    (kappa_plus*(kappa_minus**2 + Omega**2) - (a**2 + b**2 * K)*(kappa_plus**2 + Omega**2) + \
+                        4*a*b*K*(kappa_plus*torch.cos(omega*beta_int) - Omega*torch.sin(omega*beta_int)))
+  
+        M12 = Ta / ((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2)) * \
+                (kappa_plus*(kappa_minus**2 + Omega**2) + b**2*kappa_minus*(kappa_plus**2 + Omega**2) - \
+                    2*a*b*((kappa_plus*kappa_minus + Omega**2)*torch.cos(omega*beta_int) - 2*K*Omega*torch.sin(omega*beta_int)))
+   
+        M22 = (Ta/tau)*(1-b**2)
+        
+        u12 = Ta / ((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2)) * \
+            (Omega*(kappa_minus**2 + Omega**2) - b**2*Omega*(kappa_plus**2 + Omega**2) + \
+                2*a*b*(2*K*Omega*torch.cos(omega*beta_int) - (kappa_plus*kappa_minus+Omega**2)*torch.sin(omega*beta_int) ))
+
+        return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps, u12 + self.numerical_eps]
+    
+    def mean(self, batch, t):
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        
+        k = self.k
+        tau = self.tau
+        omega = self.omega
+        
+        A = ( torch.exp(-k*beta_int)*(1-k*tau) - 
+              torch.exp(-beta_int/tau) * \
+                  ( (1-k*tau)*torch.cos(omega*beta_int) - \
+                    omega*tau*torch.sin(omega*beta_int)) \
+            ) /\
+            ((1-k*tau)**2 + (omega*tau)**2)
+                    
+        B = ( torch.exp(-k*beta_int)*omega*tau - \
+              torch.exp(-beta_int/tau) * \
+                  (omega*tau*torch.cos(omega*beta_int) + \
+                   (1-k*tau)*torch.sin(omega*beta_int)) \
+            ) /\
+            ((1-k*tau)**2 + (omega*tau)**2)
+        
+        batch_x, batch_eta = torch.chunk(batch, 2, dim=1)
+        
+        batch_x0, batch_x1 = torch.chunk(batch_x, 2, dim=1)
+        batch_e0, batch_e1 = torch.chunk(batch_eta, 2, dim=1)
+        
+        mean_x0 = batch_x0*torch.exp(-k*beta_int) + tau * A * batch_e0 - tau * B * batch_e1
+        mean_x1 = batch_x1*torch.exp(-k*beta_int) + tau * B * batch_e0 - tau * A * batch_e1
+        
+        mean_e0 = torch.exp(-beta_int/tau)*(torch.cos(omega*beta_int)*batch_e0 - torch.sin(omega*beta_int)*batch_e1)
+        mean_e1 = torch.exp(-beta_int/tau)*(torch.sin(omega*beta_int)*batch_e0 + torch.cos(omega*beta_int)*batch_e1)
+        
+        mean_x = torch.cat((mean_x0, mean_x1), dim=1)
+        mean_eta = torch.cat((mean_e0, mean_e1), dim=1)
+                
+        return torch.cat((mean_x, mean_eta), dim=1)
+    
+    def loss_multiplier(self, t):
+        beta = self.beta_fn(t)
+        return self.Ta * beta / self.tau**2
+    
+    def perturb_data(self, batch, t, var0x=None, var0v=None):
+        '''
+        Perturbing data according to conditional perturbation kernel with initial variances
+        var0x and var0v. Var0x is generally always 0, whereas var0v is 0 for DSM and 
+        \gamma * M for HSM.
+        '''
+        mean, var = self.mean_and_var(batch, t, var0x, var0v)
+
+        cholesky11 = (torch.sqrt(var[0]))
+        cholesky21 = ((var[1]-var[3]) / cholesky11)
+        cholesky22 = (torch.sqrt(var[2] - cholesky21 ** 2.))
+
+        if torch.sum(torch.isnan(cholesky11)) > 0 or torch.sum(torch.isnan(cholesky21)) > 0 or torch.sum(torch.isnan(cholesky22)) > 0:
+            raise ValueError('Numerical precision error.')
+
+        batch_randn = torch.randn_like(batch, device=batch.device)
+        batch_randn_x, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
+        
+        if self.config.data_dim == 1:
+            batch_randn_x = batch_randn_x.flatten()
+            batch_randn_v = batch_randn_v.flatten()
+
+        noise_x = cholesky11 * batch_randn_x
+        noise_v = cholesky21 * batch_randn_x + cholesky22 * batch_randn_v
+        
+        if self.config.data_dim == 1:
+            noise_x = noise_x.reshape((-1,1))
+            noise_v = noise_v.reshape((-1,1))
+        noise = torch.cat((noise_x, noise_v), dim=1)
+
+        perturbed_data = mean + noise
+        return perturbed_data, mean, noise, batch_randn
+    
+
+if __name__=="__main__":
+    class Test:
+        def __init__(self):
+            self.Tp = 0
+            self.Ta = 1
+            self.tau = 0.25
+            self.k = 1
+            self.omega = 0.5
+        
+        def prior_sampling(self):
+            
+            k = self.k
+            tau = self.tau
+            omega = self.omega
+            Tp = self.Tp
+            Ta = self.Ta
+            
+            K = k*tau
+            Omega = omega*tau
+            kappa_plus = 1 + K
+            kappa_minus = 1 - K
+            
+            m11 = 1/k * (Tp + Ta * kappa_plus / (kappa_plus**2 + Omega**2) )
+            m12 = Ta * kappa_plus / (kappa_plus**2 + Omega**2)
+            m22 = Ta / tau
+            
+            u12 = Ta * Omega / (kappa_plus**2 + Omega**2)
+            
+            I_mat = torch.eye(2)
+            e_mat = torch.tensor([[0,1],[-1,0]])
+            
+            C11 = (m11*I_mat).tolist()
+            C12 = (m12*I_mat + u12*e_mat).tolist()
+            C21 = (m12*I_mat - u12*e_mat).tolist()
+            C22 = (m22*I_mat).tolist()
+          
+            covar = torch.tensor([ C11[0], C12[0], 
+                                   C11[1], C12[1], 
+                                   C21[0], C22[0], 
+                                   C21[1], C22[1] ])                         
+
+            covar = covar.reshape((4,4))
+        
+            zero_mean = torch.zeros(4)
+
+            sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
+            
+            sample = sampler.sample()
+            
+            sample_x, sample_eta = torch.chunk(sample, 2)
+            
+            return sample_x, sample_eta
+        
+    myTest = Test()
+    myTest.prior_sampling()

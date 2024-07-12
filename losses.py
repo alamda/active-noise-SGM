@@ -28,7 +28,7 @@ def get_loss_fn(sde, train, config):
                 # For HSM we are marginalizing over the full initial velocity
                 if config.sde == 'cld':
                     v = torch.zeros_like(x, device=x.device)
-                elif config.sde == 'active':
+                elif config.sde in ('active', 'chiral_active'):
                     v = np.sqrt(config.Ta / config.tau) * \
                         torch.normal(torch.zeros_like(x), torch.ones_like(x))
                 if config.data_dim == 1:

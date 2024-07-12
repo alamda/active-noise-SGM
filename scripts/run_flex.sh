@@ -3,17 +3,17 @@
 datasets=(#"diamond_close"
           #"multigaussian_2D_close"
           "swissroll"
-		  "multimodal_swissroll"
-		  "multimodal_swissroll_overlap"
-		  "diamond"
+		  #"multimodal_swissroll"
+		  #"multimodal_swissroll_overlap"
+		  #"diamond"
 		  #"multigaussian_1D"
-		  "multigaussian_2D"
+		  #"multigaussian_2D"
 		  )
 
 snapshot_freqs=(#"10"
 				#"100"
 				"1000"
-				"10000"
+				# "10000"
 				#"100000"
 				)
 
@@ -26,10 +26,11 @@ dirdir=(#"simulations_ml"
 		"simulations_rv2"
 		)
 
-sims=("vpsde"
-	  "passive"
-	  "active"
-	  "cld"
+sims=(#"vpsde"
+	  #"passive"
+	  #"active"
+	  #"cld"
+      "chiral_active"
       )
 
 for dir in "${dirdir[@]}"

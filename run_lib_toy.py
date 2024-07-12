@@ -74,6 +74,8 @@ def train(config, workdir):
         sde = sde_lib.PassiveDiffusion(config, beta_fn, beta_int_fn)
     elif config.sde == 'active':
         sde = sde_lib.ActiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'chiral_active':
+        sde = sde_lib.ChiralActiveDiffusion(config, beta_fn, beta_int_fn)
     else:
         raise NotImplementedError('SDE %s is unknown.' % config.sde)
 
