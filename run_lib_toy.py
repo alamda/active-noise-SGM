@@ -195,7 +195,10 @@ def train(config, workdir):
                      'ylim': (-1, 1)} ,
                 'multimodal_swissroll':                  
                     {'xlim': (-1, 1),
-                     'ylim': (-1, 1)} 
+                     'ylim': (-1, 1)} ,
+                'alanine_dipeptide':
+                    {'xlim': (-1.05, 1.05),
+                     'ylim': (-1.05, 1.05)}
                 }
             
             if config.dataset == "multigaussian_1D":
@@ -204,8 +207,15 @@ def train(config, workdir):
                 ax.set_xlim(lim_dict[config.dataset]['xlim'])
                 ax.set_ylim(lim_dict[config.dataset]['ylim'])
                 
+                if config.dataset == "alanine_dipeptide":
+                    s=None
+                    alpha=0.01
+                else:
+                    s=3
+                    alpha=0.1
+                
                 ax.scatter(x.cpu().numpy()[:,0], x.cpu().numpy()[:,1],
-                           alpha=0.1, c="green", edgecolor=None, s=3)
+                           alpha=alpha, c="green", edgecolor=None, s=s)
             else:
                 ax.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
             

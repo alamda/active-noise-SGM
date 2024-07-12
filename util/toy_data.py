@@ -142,6 +142,17 @@ def inf_data_gen(dataset, batch_size):
         
         return data
 
+    if dataset == 'alanine_dipeptide':
+        angles = np.loadtxt("alanine_dipeptide.dat", usecols=(0,1))/180
+    
+        num_points = angles.shape[0]
+        
+        point_idx_arr = np.random.randint(low=0, high=num_points, size=batch_size)
+        
+        data = angles[point_idx_arr]
+        
+        return torch.from_numpy(data)
+
     else:
         raise NotImplementedError(
             'Toy dataset %s is not implemented.' % dataset)
@@ -149,8 +160,8 @@ def inf_data_gen(dataset, batch_size):
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
-    dataset = "multigaussian_2D"
-    batch_size = 1000
+    dataset = "alanine_dipeptide"
+    batch_size = 5120 #10000
     num_bins = 50
     
     fig, ax = plt.subplots()
