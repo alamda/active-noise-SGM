@@ -136,7 +136,6 @@ def active_analytic_score(x=None, eta=None, Tp=0, Ta=1, tau=0.25, mu_list=None, 
     Fx_den = np.zeros_like(x)
     Feta_num = np.zeros_like(eta)
     Feta_den = np.zeros_like(eta)
-    expterm1 = np.zeros((x.shape[1], 1))
     
     for idx, mu in enumerate(mu_list):
         mu = mu.flatten()
@@ -155,7 +154,10 @@ def active_analytic_score(x=None, eta=None, Tp=0, Ta=1, tau=0.25, mu_list=None, 
         q = np.prod(h/np.sqrt(Delta_eff))
 
         z = np.exp(np.sum((-K1*(x-a*mu)**2 + 2*K2*(x-a*mu)*eta - K3*eta**2)/(2*Delta_eff), axis=0)) # This leads to numerical instability as it is very close to 0 if t is small and we start far from the true distribution
-        #print(z)
+        eh = np.sum((-K1*(x-a*mu)**2 + 2*K2*(x-a*mu)*eta - K3*eta**2)/(2*Delta_eff), axis=0)
+        print(eh, np.exp(eh))
+        print(a,b,c,g)
+        breakpoint()
         
         Fx_num = Fx_num + pi*q*(K2*eta - K1*(x-a*mu))*z/Delta_eff
         Fx_den = Fx_den + pi*q*z
@@ -194,16 +196,19 @@ def active_prior(shape=None, Tp=0, Ta=1, k=1, tau=0.25):
 
 def reverse_active(x=None, y=None, Tp=0, Ta=1, tau=0.25, mu_list=None, sigma_list=None, pi_list=None, t_idx=None, dt=None, noise_level=100):
     t=t_idx*dt
+    print(t)
     
     Fx, Fy = active_analytic_score(x=x, eta=y, Tp=Tp, Ta=Ta, tau=tau, mu_list=mu_list, sigma_list=sigma_list, pi_list=pi_list, t=t)
     x = x + dt*(x-y) + 2*Tp*Fx*dt + np.sqrt(2*Tp*dt)*torch.randn_like(x)
     y = y + dt*y/tau + (2*Ta/(tau*tau))*(Fy)*dt + (1/tau)*np.sqrt(2*Ta*dt)*torch.randn_like(y)
     
+    # print(Fy)
+    
     return x, y, Fx, Fy
 
-if __name__=="__main__":
-    batch_size = 1000
-    dataset = "multigaussian_2D"
+def plot_score_hist(dataset=None):
+    batch_size = 100
+    # dataset = "multigaussian_2D"
     dt = 0.01
     num_steps = 100
     
@@ -222,7 +227,7 @@ if __name__=="__main__":
     
     # x, eta = active_prior(shape=data.shape)
 
-    for t_idx in range(num_steps-1, 0-1, -1):
+    for t_idx in range(num_steps, 0, -1):
         x, Fx = reverse_passive(x=x, dt=dt, mu_list=mu_list, sigma_list=sigma_list, pi_list=pi_list, t_idx=t_idx)
         # print(Fx)
         
@@ -254,5 +259,35 @@ if __name__=="__main__":
     for t_idx in range(num_steps, 0, -1):
         x, eta, Fx, Feta = reverse_active(x=x, y=eta, mu_list=mu_list, sigma_list=pi_list, pi_list=pi_list, t_idx=t_idx, dt=dt)
     
-        # print(Feta)
+        score=Feta
+        
+        fig, ax = plt.subplots()
+        
+        time = "{:0.2f}".format(t_idx*dt)
+
+        ax.set_title(f"ANALYTIC active, {dataset}, t={time}")
+        ax.set_ylim(0,1)
+        ax.set_xlim(-5, 5)
+        fake_x_arr = np.linspace(-5, 5, 10000)
+        fake_y_arr = np.exp(-(fake_x_arr)**2)/np.sqrt(2*np.pi)
+    
+        ax.plot(fake_x_arr, fake_y_arr, label="N(0,I)", color='black')
+        ax.hist(np.array(score[:,0]), bins = 50, density=True, range=(-5, 5), label="x", alpha=0.5)
+        ax.hist(np.array(score[:,1]), bins = 50, density=True, range=(-5, 5), label="y", alpha=0.5)
+        ax.legend()
+        
+        fname = f"ANALYTIC_active_{dataset}_t{time}.png"
+            
+        plt.savefig(fname)
+    
+        plt.close()
+
+if __name__=="__main__":
+    datasets = [ "multigaussian_2D",
+                 "multigaussian_2D_close", 
+                 "diamond",
+                 "diamond_close"]
+    
+    for dataset in datasets:
+        plot_score_hist(dataset=dataset)
     
