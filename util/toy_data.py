@@ -164,7 +164,31 @@ if __name__=="__main__":
     batch_size = 5120 #10000
     num_bins = 50
     
-    fig, ax = plt.subplots()
+    lim_dict = {'multigaussian_2D':
+            {'xlim': (-3, 3),
+                'ylim': (-1.5, 1.5)},
+        'multigaussian_2D_close':
+            {'xlim': (-3, 3),
+                'ylim': (-1.5, 1.5)},
+        'diamond':                  
+            {'xlim': (-1, 1),
+                'ylim': (-1, 1)},
+        'diamond_close':            
+            {'xlim': (-1, 1),
+                'ylim': (-1, 1)},
+        'swissroll':                
+            {'xlim': (-0.25, 0.25),
+                'ylim': (-0.25, 0.25)},
+        'multimodal_swissroll_overlap':
+            {'xlim': (-0.5, 0.5),
+                'ylim': (-0.5, 0.5)} ,
+        'multimodal_swissroll':                  
+            {'xlim': (-1, 1),
+                'ylim': (-1, 1)} ,
+        'alanine_dipeptide':
+            {'xlim': (-1.05, 1.05),
+                'ylim': (-1.05, 1.05)}
+        }
     
     if dataset == "multigaussian_1D":
         sample = inf_data_gen(dataset, batch_size)
@@ -180,3 +204,28 @@ if __name__=="__main__":
         ax.hist2d(sample[:,0], sample[:,1])
         
         plt.show()
+
+    for dataset, lims in lim_dict.items():
+        print(dataset)
+        
+        if dataset == "alanine_dipeptide":
+            s=None
+            alpha=0.01
+        else:
+            s=3
+            alpha=0.1
+        
+        sample = inf_data_gen(dataset, batch_size)
+
+        xlim = lims['xlim']
+        ylim = lims['ylim']
+        
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal')
+        
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.scatter(sample[:,0], sample[:,1], alpha=alpha, color='green', s=s)
+        
+        plt.savefig(f"{dataset}.png")
+        plt.close()
