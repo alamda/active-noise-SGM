@@ -219,6 +219,8 @@ def train(config, workdir):
             else:
                 ax.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
             
+            ax.set_title(f"iter: {step}", fontsize=20)
+            
             plt.savefig(os.path.join(this_sample_dir,
                         'sample_rank_%d.png' % global_rank))
             plt.close()
