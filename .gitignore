@@ -4,6 +4,8 @@ progress.out
 score_hist/* 
 misc/*.png
 misc/*.gif
+alanine_dipeptide/
+misc/gifs/
 
 #Simulations subdirectories
 vpsde_*/
