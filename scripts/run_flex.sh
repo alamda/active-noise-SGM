@@ -1,17 +1,17 @@
 #!/bin/bash
 
-datasets=("diamond_close"
-          "multigaussian_2D_close"
-          #"swissroll"
-		  #"multimodal_swissroll"
-		  #"multimodal_swissroll_overlap"
+datasets=(#"diamond_close"
+          #"multigaussian_2D_close"
+          "swissroll"
+		  "multimodal_swissroll"
+		  "multimodal_swissroll_overlap"
 		  "diamond"
 		  #"multigaussian_1D"
 		  "multigaussian_2D"
 		  )
 
 snapshot_freqs=(#"10"
-				"100"
+				#"100"
 				"1000"
 				"10000"
 				#"100000"
