@@ -652,13 +652,21 @@ class ChiralActiveDiffusion(CLD):
 
 
         M11 = (Tp/k)*(1-a**2) + \
-                ((Ta / k) / ((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2))) * \
-                    (kappa_plus*(kappa_minus**2 + Omega**2) - (a**2 + b**2 * K)*(kappa_plus**2 + Omega**2) + \
-                        4*a*b*K*(kappa_plus*torch.cos(omega*beta_int) - Omega*torch.sin(omega*beta_int)))
+                ( (Ta / k)/((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2)) ) * \
+                        ( kappa_plus*(kappa_minus**2 + Omega**2) - \
+                          (a**2 + b**2 * K)*(kappa_plus**2 + Omega**2) + \
+                          4*a*b*K*( kappa_plus*torch.cos(omega*beta_int) - \
+                                    Omega*torch.sin(omega*beta_int)
+                                  )
+                        )
   
         M12 = Ta / ((kappa_plus**2 + Omega**2)*(kappa_minus**2 + Omega**2)) * \
-                (kappa_plus*(kappa_minus**2 + Omega**2) + b**2*kappa_minus*(kappa_plus**2 + Omega**2) - \
-                    2*a*b*((kappa_plus*kappa_minus + Omega**2)*torch.cos(omega*beta_int) - 2*K*Omega*torch.sin(omega*beta_int)))
+                ( kappa_plus*(kappa_minus**2 + Omega**2) + \
+                  b**2*kappa_minus*(kappa_plus**2 + Omega**2) - \
+                  2*a*b*( ( kappa_plus*kappa_minus + Omega**2)*torch.cos(omega*beta_int) - \
+                            2*K*Omega*torch.sin(omega*beta_int)
+                        )
+                )
    
         M22 = (Ta/tau)*(1-b**2)
         
