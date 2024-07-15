@@ -693,7 +693,7 @@ class ChiralActiveDiffusion(CLD):
         batch_e0, batch_e1 = torch.chunk(batch_eta, 2, dim=1)
         
         mean_x0 = batch_x0*torch.exp(-k*beta_int) + tau * A * batch_e0 - tau * B * batch_e1
-        mean_x1 = batch_x1*torch.exp(-k*beta_int) + tau * B * batch_e0 - tau * A * batch_e1
+        mean_x1 = batch_x1*torch.exp(-k*beta_int) + tau * B * batch_e0 + tau * A * batch_e1
         
         mean_e0 = torch.exp(-beta_int/tau)*(torch.cos(omega*beta_int)*batch_e0 - torch.sin(omega*beta_int)*batch_e1)
         mean_e1 = torch.exp(-beta_int/tau)*(torch.sin(omega*beta_int)*batch_e0 + torch.cos(omega*beta_int)*batch_e1)
