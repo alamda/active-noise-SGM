@@ -608,22 +608,12 @@ class ChiralActiveDiffusion(CLD):
         m22 = Ta / tau
         
         u12 = Ta * Omega / (kappa_plus**2 + Omega**2)
-        
-        I_mat = torch.eye(2)
-        e_mat = torch.tensor([[0,1],[-1,0]])
-        
-        C11 = (m11*I_mat).tolist()
-        C12 = (m12*I_mat + u12*e_mat).tolist()
-        C21 = (m12*I_mat - u12*e_mat).tolist()
-        C22 = (m22*I_mat).tolist()
-        
-        covar = torch.tensor([ C11[0], C12[0], 
-                                C11[1], C12[1], 
-                                C21[0], C22[0], 
-                                C21[1], C22[1] ])                         
 
-        covar = covar.reshape((4,4))
-    
+        covar = torch.tensor([[m11, 0, m12, u12], \
+                              [0, m11, -u12, m12], \
+                              [m12, -u12, m22, 0], \
+                              [u12, m12, 0, m22]])
+
         zero_mean = torch.zeros(4)
 
         sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
