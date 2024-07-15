@@ -714,26 +714,52 @@ class ChiralActiveDiffusion(CLD):
         '''
         mean, var = self.mean_and_var(batch, t, var0x, var0v)
 
-        cholesky11 = (torch.sqrt(var[0]))
-        cholesky21 = ((var[1]-var[3]) / cholesky11)
-        cholesky22 = (torch.sqrt(var[2] - cholesky21 ** 2.))
+        m11 = var[0]
+        m12 = var[1]
+        m22 = var[2]
+        u12 = var[3]
 
-        if torch.sum(torch.isnan(cholesky11)) > 0 or torch.sum(torch.isnan(cholesky21)) > 0 or torch.sum(torch.isnan(cholesky22)) > 0:
-            raise ValueError('Numerical precision error.')
+        A11 = m11
+        A21 = 0
+        A22 = m11
+        A31 = m12
+        A32 = -u12
+        A33 = m22
+        A41 = u12
+        A42 = m12
+        A43 = 0
+        A44 = m22
+
+        L11 = torch.sqrt(A11)    
+        L21 = A21/L11
+        L22 = torch.sqrt(A22 - L21**2)
+        L31 = A31/L11
+        L32 = (A32 - (L31*L21))/L22
+        L33 = torch.sqrt(A33 - (L31**2 + L32**2))
+        L41 = A41/L11
+        L42 = (A42 - L41*L21)/L22
+        L43 = (A43 - (L41*L31 + L42*L32))/L33
+        L44 = torch.sqrt(A44 - (L41**2 + L42**2 + L43**2))
+        
+        cholesky_list = [L11, L21, L22, L31, L32, L33, L41, L42, L43, L44]
+
+        for cholesky in cholesky_list:
+            if torch.sum(torch.isnan(cholesky)) > 0:
+                raise ValueError('Numerical precision error.')
 
         batch_randn = torch.randn_like(batch, device=batch.device)
         batch_randn_x, batch_randn_v = torch.chunk(batch_randn, 2, dim=1)
-        
-        if self.config.data_dim == 1:
-            batch_randn_x = batch_randn_x.flatten()
-            batch_randn_v = batch_randn_v.flatten()
+        batch_randn_x0, batch_randn_x1 = torch.chunk(batch_randn_x, 2, dim=1)
+        batch_randn_v0, batch_randn_v1 = torch.chunk(batch_randn_v, 2, dim=1)
 
-        noise_x = cholesky11 * batch_randn_x
-        noise_v = cholesky21 * batch_randn_x + cholesky22 * batch_randn_v
+        noise_x0 = L11*batch_randn_x0
+        noise_x1 = L21*batch_randn_x0 + L22*batch_randn_x1
+        noise_v0 = L31*batch_randn_x0 + L32*batch_randn_x1 + L33*batch_randn_v0
+        noise_v1 = L41*batch_randn_x0 + L42*batch_randn_x1 + L43*batch_randn_v0 + L44*batch_randn_v1
+
+        noise_x = torch.cat((noise_x0, noise_x1), dim=1)
+        noise_v = torch.cat((noise_v0, noise_v1), dim=1)
         
-        if self.config.data_dim == 1:
-            noise_x = noise_x.reshape((-1,1))
-            noise_v = noise_v.reshape((-1,1))
         noise = torch.cat((noise_x, noise_v), dim=1)
 
         perturbed_data = mean + noise
