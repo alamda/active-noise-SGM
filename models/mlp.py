@@ -23,7 +23,7 @@ class MLP(nn.Module):
         act = nn.SiLU()
 
         self.x_input = True
-        self.v_input = True if config.sde in ('cld', 'active') else False
+        self.v_input = True if config.sde in ('cld', 'active', 'chiral_active') else False
 
         if input_dim is None:
             input_dim = config.data_dim

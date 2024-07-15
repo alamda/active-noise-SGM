@@ -66,6 +66,9 @@ class CLD(nn.Module):
             Evaluating drift and diffusion of the ReverseSDE.
             '''
             drift, diffusion = sde_fn(u, self.config.max_time - t)
+            # print(u.shape, drift.shape, diffusion.shape)
+            u = torch.reshape(u, (t.shape[0], -1))
+            # print(u.shape)
             score = score if score is not None else score_fn(u, self.config.max_time - t)
             
             drift_x, drift_v = torch.chunk(drift, 2, dim=1)
@@ -545,7 +548,7 @@ class ChiralActiveDiffusion(CLD):
     
     @property
     def type(self):
-        return 'active'
+        return 'chiral_active'
     
     def sde(self, u, t):
         beta = add_dimensions(self.beta_fn(t), self.config.is_image, dim=self.config.data_dim)
@@ -568,10 +571,10 @@ class ChiralActiveDiffusion(CLD):
             
         M = torch.tensor([[tau, omega],
                           [-omega, 1/tau]],
-                         device=self.config.device)
+                         device=eta.device)
         
         drift_x = - k * beta * x + beta*eta
-        drift_eta =  - beta * M *eta
+        drift_eta =  - beta  * torch.matmul(M, eta.T[:,None].reshape((2,-1))).T
         
         diffusion_x = torch.sqrt(2 * beta * Tp) * torch.ones_like(x)
         
@@ -583,7 +586,7 @@ class ChiralActiveDiffusion(CLD):
             
             diffusion_x = diffusion_x.reshape((-1,1))
             diffusion_eta = diffusion_eta.reshape((-1,1))
-                                              
+                   
         return torch.cat((drift_x, drift_eta), dim=1), \
                torch.cat((diffusion_x, diffusion_eta), dim=1)
     
@@ -625,11 +628,11 @@ class ChiralActiveDiffusion(CLD):
 
         sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
         
-        sample = sampler.sample()
+        sample = sampler.sample(sample_shape=torch.Size([shape[0]]))
         
-        sample_x, sample_eta = torch.chunk(sample, 2)
+        sample_x, sample_eta = torch.chunk(sample, 2, dim=1)
         
-        return sample_x, sample_eta
+        return sample_x.to(device=self.config.device), sample_eta.to(device=self.config.device)
     
     def var(self, t, var0x=None, var0v=None):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
