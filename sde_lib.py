@@ -569,7 +569,7 @@ class ChiralActiveDiffusion(CLD):
             x = x.flatten()
             eta = eta.flatten()
             
-        M = torch.tensor([[tau, omega],
+        M = torch.tensor([[1/tau, omega],
                           [-omega, 1/tau]],
                          device=eta.device)
         
