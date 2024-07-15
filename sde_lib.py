@@ -768,15 +768,17 @@ class ChiralActiveDiffusion(CLD):
     
 
 if __name__=="__main__":
+    import matplotlib.pyplot as plt
+    
     class Test:
         def __init__(self):
             self.Tp = 0
             self.Ta = 1
             self.tau = 0.25
             self.k = 1
-            self.omega = 0.5
+            self.omega = 0
         
-        def prior_sampling(self):
+        def prior_sampling(self, shape):
             
             k = self.k
             tau = self.tau
@@ -784,8 +786,8 @@ if __name__=="__main__":
             Tp = self.Tp
             Ta = self.Ta
             
-            K = k*tau
-            Omega = omega*tau
+            K = k * tau
+            Omega = omega * tau
             kappa_plus = 1 + K
             kappa_minus = 1 - K
             
@@ -794,31 +796,37 @@ if __name__=="__main__":
             m22 = Ta / tau
             
             u12 = Ta * Omega / (kappa_plus**2 + Omega**2)
-            
-            I_mat = torch.eye(2)
-            e_mat = torch.tensor([[0,1],[-1,0]])
-            
-            C11 = (m11*I_mat).tolist()
-            C12 = (m12*I_mat + u12*e_mat).tolist()
-            C21 = (m12*I_mat - u12*e_mat).tolist()
-            C22 = (m22*I_mat).tolist()
-          
-            covar = torch.tensor([ C11[0], C12[0], 
-                                   C11[1], C12[1], 
-                                   C21[0], C22[0], 
-                                   C21[1], C22[1] ])                         
 
-            covar = covar.reshape((4,4))
+            covar = torch.tensor([[m11, 0, m12, u12], \
+                                [0, m11, -u12, m12], \
+                                [m12, -u12, m22, 0], \
+                                [u12, m12, 0, m22]])
+            
+            print(covar)
         
             zero_mean = torch.zeros(4)
 
             sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
             
-            sample = sampler.sample()
+            sample = sampler.sample(sample_shape=torch.Size([shape[0]]))
             
-            sample_x, sample_eta = torch.chunk(sample, 2)
+            sample_x, sample_eta = torch.chunk(sample, 2, dim=1)
+            
+            fig, axs = plt.subplots(1,2)
+            
+            for ax in axs:
+                ax.set_aspect('equal')
+            
+            axs[0].scatter(sample_x[:,0], sample_x[:,1])
+            axs[1].scatter(sample_eta[:,0], sample_eta[:,1])
+            
+            plt.show()
+            
+            breakpoint()
+            plt.close()
             
             return sample_x, sample_eta
+            # return sample_x.to(device=self.config.device), sample_eta.to(device=self.config.device)
         
     myTest = Test()
-    myTest.prior_sampling()
+    myTest.prior_sampling((1000,))
