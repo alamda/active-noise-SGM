@@ -190,8 +190,8 @@ def train(config, workdir):
                     {'xlim': (-1, 1),
                      'ylim': (-1, 1)},
                 'swissroll':                
-                    {'xlim': (-1, 1),
-                     'ylim': (-1, 1)},
+                    {'xlim': (-0.25, 0.25),
+                     'ylim': (-0.25, 0.25)},
                 'multimodal_swissroll_overlap':
                     {'xlim': (-1, 1),
                      'ylim': (-1, 1)} ,
