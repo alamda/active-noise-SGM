@@ -21,7 +21,7 @@ class Ising2D:
             self.mc_steps(num_steps=self.num_steps)
 
     def init_state(self):
-        return 2*np.random.randint(2, size=(N,N)) - 1
+        return 2*np.random.randint(2, size=(self.N,self.N)) - 1
     
     def calc_num_bonds(self, config=None, i=None, j=None):
         num_bonds = config[(i+1)%self.N, j] + \
