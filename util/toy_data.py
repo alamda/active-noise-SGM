@@ -67,7 +67,7 @@ def inf_data_gen(dataset, batch_size):
         data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
         return torch.from_numpy(data.astype('float32'))
     
-    if dataset == 'multimodal_swissroll_overlap':
+    elif dataset == 'multimodal_swissroll_overlap':
         NOISE = 0.2
         MULTIPLIER = 0.01
         OFFSETS = [[0.1, 0.1], [0.1, -0.1], [-0.1, -0.1], [-0.1, 0.1]]
@@ -85,7 +85,7 @@ def inf_data_gen(dataset, batch_size):
         data = np.concatenate(sr, axis=0)[np.random.permutation(batch_size)]
         return torch.from_numpy(data.astype('float32'))
     
-    if dataset == 'multigaussian_1D':     
+    elif dataset == 'multigaussian_1D':     
         mu_list = [-1.2, 1.2]
         sigma_list = [0.5, 0.5]
         pi_list = [0.5, 0.5]
@@ -105,7 +105,7 @@ def inf_data_gen(dataset, batch_size):
         
         return torch.from_numpy(data.astype('float32'))
     
-    if dataset in ('multigaussian_2D', 'multigaussian_2D_close'):
+    elif dataset in ('multigaussian_2D', 'multigaussian_2D_close'):
         if dataset == 'multigaussian_2D':
             mu_x_list = [-1.2, 1.2]
         elif dataset == 'multigaussian_2D_close':
@@ -142,7 +142,7 @@ def inf_data_gen(dataset, batch_size):
         
         return data
 
-    if dataset == 'alanine_dipeptide':
+    elif dataset == 'alanine_dipeptide':
         angles = np.loadtxt("alanine_dipeptide.dat", usecols=(0,1))/180
     
         num_points = angles.shape[0]
