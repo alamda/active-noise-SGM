@@ -13,3 +13,5 @@ cld_*/
 passive_*/
 active_*/
 tmp/
+ising_2D/
+cifar10_test/
