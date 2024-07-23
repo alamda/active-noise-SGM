@@ -8,9 +8,10 @@
 import torch
 import numpy as np
 from sklearn.datasets import make_swiss_roll
+from util.ising_2D import Ising2D
 
 
-def inf_data_gen(dataset, batch_size):
+def inf_data_gen(dataset, batch_size, config=None):
     if dataset == 'multimodal_swissroll':
         NOISE = 0.2
         MULTIPLIER = 0.01
@@ -152,6 +153,18 @@ def inf_data_gen(dataset, batch_size):
         data = angles[point_idx_arr]
         
         return torch.from_numpy(data)
+    elif dataset == "ising_2D":
+        lattice_list = []
+        for _ in range(batch_size):
+            ising = Ising2D(N=config.ising_lattice_size,
+                            num_steps=config.ising_num_equil_steps,
+                            temp=config.ising_lattice_temp)
+             
+            lattice_list.append(ising.state)
+        
+        data = np.concatenate(lattice_list, axis=0)[np.random.permutation(batch_size)]    
+        
+        return torch.from_numpy(data.astype('float32'))
 
     else:
         raise NotImplementedError(

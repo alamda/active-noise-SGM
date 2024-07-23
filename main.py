@@ -69,8 +69,12 @@ def main(config):
             set_logger(gfile_stream)
 
         if config.is_image:
-            import run_lib
-            run_lib.train(config, workdir)
+            if config.dataset == "ising_2D":
+                import run_lib_toy
+                run_lib_toy.train(config, workdir)
+            else:
+                import run_lib
+                run_lib.train(config, workdir)
         else:
             import run_lib_toy
             run_lib_toy.train(config, workdir)
@@ -86,8 +90,12 @@ def main(config):
                 set_logger(gfile_stream)
 
             if config.is_image:
-                import run_lib
-                run_lib.evaluate(config, workdir)
+                if config.dataset == "ising_2D":
+                    import run_lib_toy
+                    run_lib_toy.evaluate(config, workdir)
+                else:
+                    import run_lib
+                    run_lib.evaluate(config, workdir)
             else:
                 import run_lib_toy
                 run_lib_toy.evaluate(config, workdir)
@@ -100,8 +108,12 @@ def main(config):
             set_logger(gfile_stream)
 
             if config.is_image:
-                import run_lib
-                run_lib.train(config, workdir)
+                if config.dataset == "ising_2D":
+                    import run_lib_toy
+                    run_lib_toy.train(config, workdir)
+                else:
+                    import run_lib
+                    run_lib.train(config, workdir)
             else:
                 import run_lib_toy
                 run_lib_toy.train(config, workdir)
@@ -117,9 +129,12 @@ def main(config):
                 set_logger(gfile_stream)
 
             if config.is_image:
-                import run_lib
-                run_lib.reverse_forces(config, workdir)
-            else:
+                if config.dataset == "ising_2D":
+                    import run_lib_toy
+                    run_lib_toy.reverse_forces(config, workdir)
+                else:
+                    import run_lib
+                    run_lib.reverse_forces(config, workdir)
                 import run_lib_toy
                 run_lib_toy.reverse_forces(config, workdir)
         else:
@@ -160,6 +175,11 @@ if __name__ == '__main__':
     p.add('--image_channels', type=int)
     p.add('--data_dim', type=int)  # Dimension of non-image data
     p.add('--data_location', default=None)
+
+    # Ising Model Parameters
+    p.add('--ising_lattice_size', type=int)
+    p.add('--ising_lattice_temp', type=float)
+    p.add('--ising_num_equil_steps', type=int)
 
     # SDE
     p.add('--sde', choices=['vpsde', 'cld', 'passive', 'active', 'chiral_active'])

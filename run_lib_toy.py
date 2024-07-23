@@ -17,9 +17,10 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 from models import mlp
+from models import ncsnpp
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
-from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn, get_data_inverse_scaler
+from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn, get_data_inverse_scaler, get_data_scaler
 from util.checkpoint import save_checkpoint, restore_checkpoint
 import losses
 import sde_lib
@@ -93,6 +94,11 @@ def train(config, workdir):
         n_params = sum([np.prod(p.size()) for p in model_parameters])
         logging.info('Number of trainable parameters in model: %d' % n_params)
     dist.barrier()
+    
+    # Utility functions to map images from [0, 1] to [-1, 1] and back.
+    # Used for Ising model only
+    scaler = get_data_scaler(config)
+    inverse_scaler = get_data_inverse_scaler(config)
 
     optim_params = score_model.parameters()
     optimizer = get_optimizer(config, optim_params)
@@ -119,8 +125,14 @@ def train(config, workdir):
     optimize_fn = optimization_manager(config)
     train_step_fn = losses.get_step_fn(True, optimize_fn, sde, config)
 
-    sampling_shape = (config.sampling_batch_size,
-                      config.data_dim)
+    if config.is_image: # Ising model
+        sampling_shape = (config.sampling_batch_size,
+                      config.image_channels,
+                      config.image_size,
+                      config.image_size)
+    else:
+        sampling_shape = (config.sampling_batch_size,
+                        config.data_dim)
     sampling_fn = sampling.get_sampling_fn(
         config, sde, sampling_shape, config.sampling_eps)
 
@@ -246,8 +258,15 @@ def train(config, workdir):
         # Training
         start_time = time.time()
 
-        x = inf_data_gen(config.dataset, config.training_batch_size).to(
-            config.device)
+        if config.dataset == "ising_2D":
+            x = inf_data_gen(config.dataset, config.training_batch_size, config).to(
+                config.device)
+        else:
+            x = inf_data_gen(config.dataset, config.training_batch_size).to(
+                config.device)
+        if config.is_image: # For Ising model
+            x = scaler(x)
+            x = x.to(config.device)
         loss = train_step_fn(state, x)
 
         if step % config.log_freq == 0:
@@ -305,6 +324,11 @@ def evaluate(config, workdir):
     score_model = DDP(score_model, device_ids=[local_rank])
     ema = ExponentialMovingAverage(
         score_model.parameters(), decay=config.ema_rate)
+    
+    # Utility functions to map images from [0, 1] to [-1, 1] and back.
+    # Used for Ising model only 
+    scaler = get_data_scaler(config)
+    inverse_scaler = get_data_inverse_scaler(config)
 
     optim_params = score_model.parameters()
     optimizer = get_optimizer(config, optim_params)
