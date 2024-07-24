@@ -69,12 +69,8 @@ def main(config):
             set_logger(gfile_stream)
 
         if config.is_image:
-            if config.dataset == "ising_2D":
-                import run_lib_toy
-                run_lib_toy.train(config, workdir)
-            else:
-                import run_lib
-                run_lib.train(config, workdir)
+            import run_lib
+            run_lib.train(config, workdir)
         else:
             import run_lib_toy
             run_lib_toy.train(config, workdir)
@@ -90,12 +86,8 @@ def main(config):
                 set_logger(gfile_stream)
 
             if config.is_image:
-                if config.dataset == "ising_2D":
-                    import run_lib_toy
-                    run_lib_toy.evaluate(config, workdir)
-                else:
-                    import run_lib
-                    run_lib.evaluate(config, workdir)
+                import run_lib
+                run_lib.evaluate(config, workdir)
             else:
                 import run_lib_toy
                 run_lib_toy.evaluate(config, workdir)
@@ -108,12 +100,8 @@ def main(config):
             set_logger(gfile_stream)
 
             if config.is_image:
-                if config.dataset == "ising_2D":
-                    import run_lib_toy
-                    run_lib_toy.train(config, workdir)
-                else:
-                    import run_lib
-                    run_lib.train(config, workdir)
+                import run_lib
+                run_lib.train(config, workdir)
             else:
                 import run_lib_toy
                 run_lib_toy.train(config, workdir)
@@ -129,12 +117,9 @@ def main(config):
                 set_logger(gfile_stream)
 
             if config.is_image:
-                if config.dataset == "ising_2D":
-                    import run_lib_toy
-                    run_lib_toy.reverse_forces(config, workdir)
-                else:
-                    import run_lib
-                    run_lib.reverse_forces(config, workdir)
+                import run_lib
+                run_lib.reverse_forces(config, workdir)
+            else:
                 import run_lib_toy
                 run_lib_toy.reverse_forces(config, workdir)
         else:
