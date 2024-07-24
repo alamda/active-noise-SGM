@@ -1,4 +1,52 @@
 import numpy as np
+from torch.utils.data import Dataset
+import torch
+
+class Ising2DDataset(Dataset):
+    def __init__(self, beta=None, N=None, num_steps=None, num_samples=None):
+        self.beta = beta
+        self.N = N
+        self.num_steps = num_steps
+        self.num_samples = num_samples
+    
+    def __len__(self):
+        return self.num_samples
+    
+    def init_state(self):
+        return 2*np.random.randint(2, size=(self.N,self.N)) - 1
+    
+    def calc_num_bonds(self, config=None, i=None, j=None):
+        num_bonds = config[(i+1)%self.N, j] + \
+                    config[i, (j+1)%self.N] + \
+                    config[(i-1)%self.N, j] + \
+                    config[i, (j-1)%self.N]
+                    
+        return num_bonds
+    
+    def mc_steps(self, state=None, num_steps=1):
+        for _ in range(num_steps):
+            a = np.random.randint(0, self.N)
+            b = np.random.randint(0, self.N)
+            
+            s = state[a,b]
+            
+            num_bonds = self.calc_num_bonds(config=state, i=a, j=b)
+            
+            cost = 2*s*num_bonds
+            
+            if cost < 0:
+                s *= -1
+            elif np.random.uniform() < np.exp(-cost*self.beta):
+                s *= -1
+                
+            state[a,b] = s
+        
+        return state
+    
+    def __getitem__(self, idx):
+        state = self.mc_steps(state=self.init_state(), num_steps=self.num_steps)
+        
+        return torch.from_numpy(state).reshape(1, self.N, self.N), self.beta
 
 class Ising2D:
     def __init__(self, N=10, num_steps=None, temp=1.0):

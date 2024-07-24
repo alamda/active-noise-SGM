@@ -14,6 +14,7 @@ from util.lmdb_datasets import LMDBDataset
 from thirdparty.lsun import LSUN, LSUNClass
 import os
 from torch._utils import _accumulate
+from util.ising_2D import Ising2DDataset
 
 
 class CropCelebA64(object):
@@ -33,10 +34,10 @@ def get_loaders(args):
     """Get data loaders for required dataset."""
     if args.data_location is None:
         args.data_location = os.path.join(args.root, 'data')
-    return get_loaders_eval(args.dataset, args.data_location, args.distributed, args.training_batch_size, args.testing_batch_size)
+    return get_loaders_eval(args.dataset, args.data_location, args.distributed, args.training_batch_size, args.testing_batch_size, args=args)
 
 
-def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_batch_size, augment=True, drop_last_train=True, shuffle_train=True):
+def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_batch_size, augment=True, drop_last_train=True, shuffle_train=True, args=None):
     if dataset == 'cifar10':
         num_classes = 10
         train_transform, valid_transform = _data_transforms_cifar10()
@@ -137,6 +138,18 @@ def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_ba
             root=root, name='ffhq', train=True, transform=train_transform)
         valid_data = LMDBDataset(
             root=root, name='ffhq', train=False, transform=valid_transform)
+    elif dataset == 'ising_2D':
+        num_classes = 1
+        num_samples = int(args.n_train_iters * training_batch_size) + 1
+        train_data = Ising2DDataset(beta=args.ising_lattice_temp, \
+                                    N=args.ising_lattice_size, \
+                                    num_steps=args.ising_num_equil_steps, \
+                                    num_samples=num_samples)
+        
+        valid_data = Ising2DDataset(beta=args.ising_lattice_temp, \
+                                    N=args.ising_lattice_size, \
+                                    num_steps=args.ising_num_equil_steps, \
+                                    num_samples=num_samples)
     else:
         raise NotImplementedError
 
