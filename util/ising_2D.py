@@ -46,7 +46,7 @@ class Ising2DDataset(Dataset):
     def __getitem__(self, idx):
         state = self.mc_steps(state=self.init_state(), num_steps=self.num_steps)
         
-        return torch.from_numpy(state.astype(np.float64)).reshape(self.N, self.N), self.beta
+        return torch.from_numpy(state.astype(np.float64)).reshape(1, self.N, self.N), self.beta
 
 class Ising2D:
     def __init__(self, N=10, num_steps=None, temp=1.0):
