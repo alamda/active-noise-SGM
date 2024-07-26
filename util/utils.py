@@ -20,6 +20,7 @@ except ImportError:
     logging.info('Apex is not available. Falling back to PyTorch\'s native Adam. Install Apex for faster training.')
     from torch.optim import Adam as Adam
 
+import random
 
 
 def make_dir(dir):
@@ -88,6 +89,19 @@ def get_data_inverse_scaler(config):
     else:
         return lambda x: x
 
+def get_data_scaler_ising(config):
+    if (config.dataset == 'ising_2D') and config.is_image:
+        # Can use torch.sign() instead of nested torch.where(),
+        # but if value is exactly equal to 0, torch.sign() returns 0.abs
+        # For a float64, the chance of a value being exactly zero are low and 
+        # the chances of it affecting diffusion results are low.
+        # The current method sets values that are equal to 0 to either -1 or +1
+        # (with equal probability)
+        return lambda x: torch.where(torch.where(x == 0., random.choice([-1., 1.]), x) < 0, -1., 1.) #torch.sign(x) 
+    
+def get_data_inverse_scaler_ising(config):
+    if (config.dataset == 'ising_2D') and config.is_image:
+        return lambda x: torch.where(torch.where(x == 0., random.choice([-1., 1.]), x) < 0, -1., 1.) #torch.sign(x)
 
 def compute_bpd_from_nll(nll, D, inverse_scaler):
     offset = 7 - inverse_scaler(-1)

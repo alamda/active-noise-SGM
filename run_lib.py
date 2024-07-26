@@ -19,7 +19,7 @@ from util.utils import calculate_frechet_distance
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
 from models import ncsnpp
-from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, set_seeds, save_img
+from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img
 from util.utils import compute_eval_loss, compute_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
 from util import datasets
 from util.checkpoint import save_checkpoint, restore_checkpoint
@@ -91,8 +91,12 @@ def train(config, workdir):
     dist.barrier()
 
     # Utility functions to map images from [0, 1] to [-1, 1] and back.
-    scaler = get_data_scaler(config)
-    inverse_scaler = get_data_inverse_scaler(config)
+    if config.dataset == 'ising_2D':
+        scaler = get_data_scaler_ising(config)
+        inverse_scaler = get_data_inverse_scaler_ising(config)
+    else:
+        scaler = get_data_scaler(config)
+        inverse_scaler = get_data_inverse_scaler(config)
 
     optim_params = score_model.parameters()
     optimizer = get_optimizer(config, optim_params)
