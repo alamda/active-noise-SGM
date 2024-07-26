@@ -201,7 +201,7 @@ def train(config, workdir):
                 save_img(x.clamp(0.0, 1.0), os.path.join(
                     this_sample_dir, 'sample.png'))
 
-                if config.sde == 'uld':
+                if config.sde == 'cld':
                     np.save(os.path.join(this_sample_dir, 'sample_x'), x.cpu())
                     np.save(os.path.join(this_sample_dir, 'sample_v'), v.cpu())
                 else:
