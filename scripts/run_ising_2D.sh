@@ -17,6 +17,15 @@ sims=(#"vpsde"
 	  "cld"
       )
 
+betas=("0.01"
+	   "0.1"
+	   "0.5"
+	   "1.0"
+	   "1.5"
+	   "2"
+	   "2.5"
+	   )
+
 for dir in "${dirdir[@]}"
 do
 
@@ -25,24 +34,29 @@ do
 
 for sim in "${sims[@]}"
 do
-		
-	root_dir="${dir}/${sim}_${dataset}"
+
+for beta in "${betas[@]}"
+do		
+	root_dir="${dir}/${sim}_${dataset}_beta${beta}"
 
 	if [ ! -d $root_dir ]
 	then
         echo "starting $root_dir" >> $out_file
-		
-        python main.py -cc ${dir}/config_ising_2D_${sim}_train.txt --root $root_dir --workdir work_dir/dataset #--dataset $dataset 
-		
-		echo "$root_dir done" >> $out_file
+		mode="train"
 	else
-		echo "$root_dir directory exists, not running" >> $out_file
+		mode="continue --seed 0 --cont_nbr ${date '+%s'}"
+        echo "continuing $root_dir" >> $out_file
 	fi
+		
+    python main.py -cc ${dir}/config_ising_2D_${sim}_train.txt --root $root_dir --workdir work_dir/dataset --dataset ising_2D --ising_lattice_temp $beta --mode $mode
+		
+	echo "$root_dir done" >> $out_file
 
 done
 
 done
 
+done
 
 done
 
