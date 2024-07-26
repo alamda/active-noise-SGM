@@ -148,7 +148,7 @@ def broadcast_params(params):
         dist.broadcast(param.data, src=0)
 
 
-def save_img(x, filename, figsize=None):
+def save_img(x, filename, figsize=None, title=None):
     figsize = figsize if figsize is not None else (6, 6)
 
     nrow = int(np.sqrt(x.shape[0]))
@@ -156,6 +156,8 @@ def save_img(x, filename, figsize=None):
     plt.figure(figsize=figsize)
     plt.axis('off')
     plt.imshow(image_grid.permute(1, 2, 0).cpu())
+    if title is not None:
+        plt.title(title, fontsize=20)
     plt.savefig(filename)
     plt.close()
 

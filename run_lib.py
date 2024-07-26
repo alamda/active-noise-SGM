@@ -203,7 +203,7 @@ def train(config, workdir):
                 this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
                 make_dir(this_sample_dir)
                 save_img(x.clamp(0.0, 1.0), os.path.join(
-                    this_sample_dir, 'sample.png'))
+                    this_sample_dir, 'sample.png'), title=f"iter: {step}")
 
                 if config.sde == 'cld':
                     np.save(os.path.join(this_sample_dir, 'sample_x'), x.cpu())
