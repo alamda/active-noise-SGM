@@ -49,13 +49,16 @@ class Ising2DDataset(Dataset):
         return torch.from_numpy(state.astype(np.float64)).reshape(1, self.N, self.N), self.beta
 
 class Ising2D:
-    def __init__(self, N=10, num_steps=None, temp=1.0):
+    def __init__(self, N=10, num_steps=None, temp=1.0, state=None):
         self.N = N
         self.num_steps = num_steps
         self.temp = temp
         self.beta = 1/self.temp
         
-        self.state = self.init_state()
+        if state is None:
+            self.state = self.init_state()
+        else:
+            self.state = state
         
         self.state_list = []
         
@@ -96,7 +99,8 @@ class Ising2D:
                 s *= -1
                 
             self.state[a,b] = s
-            self.state_list.append(self.state)
+            state = self.state.copy()
+            self.state_list.append(state)
             
             self.energy_list.append(self.calc_energy())
             self.mag_list.append(self.calc_mag())
