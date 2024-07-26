@@ -118,22 +118,55 @@ class Ising2D:
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
-    N = 10
-    num_steps = 10000
-    temp = 2
+    N = 32
+    num_steps = 100000
     
+    temp_arr = np.linspace(0.01,5,10)
     
+    energy_list = []
+    mag_list = []
+
+    for idx, temp in enumerate(temp_arr):
+        myIsing = Ising2D(N=N, num_steps=num_steps, temp=temp)
+        
+        energy_list.append(myIsing.energy_list[-1]/N**2)
+        mag_list.append(abs(myIsing.mag_list[-1])/N**2)
+        
+        fig_lattice, axs_lattice = plt.subplots(1,3)
+        
+        fig_lattice.suptitle(f"T={temp}")
+        
+        axs_lattice[0].imshow(myIsing.state_list[0], cmap='binary')
+        axs_lattice[0].set_title("iter 0")
+        
+        axs_lattice[1].imshow(myIsing.state_list[len(myIsing.state_list)//2], cmap='binary')
+        axs_lattice[1].set_title(f"iter {len(myIsing.state_list)//2}")
+        
+        axs_lattice[2].imshow(myIsing.state_list[-1], cmap='binary')
+        axs_lattice[2].set_title(f"iter {len(myIsing.state_list)}")
+        
+        figname_lattice = f"lattice_T{temp:.2f}_N{N}_{num_steps}.png"
+        plt.savefig(figname_lattice)
+        plt.close()
+        
+        print(f"({idx+1}/{temp_arr.size}) {temp:.2f} done")
     
     fig, axs = plt.subplots(1,2)
     
-    temp_arr = np.linspace(0.01,5,100)
+    axs[0].set_ylim(-1,1)
+    axs[1].set_ylim(0,1)
     
-    for temp in temp_arr:
-        myIsing = Ising2D(N=N, num_steps=num_steps, temp=temp)
-        
-        axs[0].scatter(temp, myIsing.energy_list[-1]/N**2)
-        axs[1].scatter(temp, myIsing.mag_list[-1]/N**2)
+    axs[0].scatter(temp_arr, energy_list, clip_on=False)
+    axs[1].scatter(temp_arr, mag_list, clip_on=False)
     
-    plt.show()
+    axs[0].set_ylabel('energy')
+    axs[1].set_ylabel('magnetization')
+    
+    axs[0].set_xlabel('temperature')
+    axs[1].set_xlabel('temperature')
+    
+    figname = f"ising_N{N}_{num_steps}.png"
+    plt.savefig(figname)
+    plt.close()
     
         
