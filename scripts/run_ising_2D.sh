@@ -44,7 +44,8 @@ do
         echo "starting $root_dir" >> $out_file
 		mode="train"
 	else
-		mode="continue --seed 0 --cont_nbr ${date '+%s'}"
+		date="$(date '+%s')"
+		mode="continue --seed 0 --cont_nbr ${date}"
         echo "continuing $root_dir" >> $out_file
 	fi
 		
