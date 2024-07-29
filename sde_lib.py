@@ -463,18 +463,23 @@ class ActiveDiffusion(CLD):
         
         sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
         
-        sample_1 = sampler.sample(sample_shape=torch.Size([shape[0]]))
-        sample_2 = sampler.sample(sample_shape=torch.Size([shape[0]]))
+        sample_1 = sampler.sample(sample_shape=torch.Size([*shape]))
+        sample_2 = sampler.sample(sample_shape=torch.Size([*shape]))
         
-        sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=1)
-        sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=1)
+        sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=-1)
+        sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=-1)
         
-        if self.config.data_dim == 2:
-            sample_x = torch.cat((sample_1x, sample_2x), dim=1)
-            sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
-        if self.config.data_dim == 1:
+        sample_1x = sample_1x.reshape(shape)
+        sample_1eta = sample_1eta.reshape(shape)
+        sample_2x = sample_2x.reshape(shape)
+        sample_2eta = sample_2eta.reshape(shape)
+        
+        if self.config.data_dim == 1 or self.config.dataset == 'ising_2D':
             sample_x = sample_1x
             sample_eta = sample_1eta
+        else:
+            sample_x = torch.cat((sample_1x, sample_2x), dim=1)
+            sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
         
         return sample_x, sample_eta
     
