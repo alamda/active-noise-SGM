@@ -41,7 +41,7 @@ class NCSNpp(nn.Module):
         self.config = config
         self.act = get_act(config)
 
-        self.v_input = True if config.sde == 'cld' else False
+        self.v_input = True if config.sde in ('cld', 'active', 'chiral_active') else False
 
         self.n_channels = config.n_channels
         ch_mult = string_to_tuple(config.ch_mult)
