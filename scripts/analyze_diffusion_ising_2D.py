@@ -24,7 +24,10 @@ if __name__=='__main__':
             
             iter_list.append(iter_num)
             
-            file_path = os.path.join(dirs, "sample_x.npy")
+            if os.path.isfile(os.path.join(dirs, "sample_x.npy")):
+                file_path = os.path.join(dirs, "sample_x.npy")
+            elif os.path.isfile(os.path.join(dirs, "sample.npy")):
+                file_path = os.path.join(dirs, "sample.npy")
             
             state = np.load(file_path)
             
