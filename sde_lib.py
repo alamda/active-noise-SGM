@@ -404,6 +404,7 @@ class PassiveDiffusion(VPSDE):
 class ActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
         config.m_inv = 1
+        config.gamma = 1
         
         super().__init__(config, beta_fn, beta_int_fn)
         
@@ -534,6 +535,7 @@ class ActiveDiffusion(CLD):
 class ChiralActiveDiffusion(CLD):
     def __init__(self, config, beta_fn, beta_int_fn):
         config.m_inv = 1
+        config.gamma = 1
         
         super().__init__(config, beta_fn, beta_int_fn)
         
