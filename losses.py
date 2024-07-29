@@ -20,7 +20,7 @@ def get_loss_fn(sde, train, config):
                 if config.sde == 'cld':
                     v = torch.randn_like(x, device=x.device) * \
                         np.sqrt(sde.gamma / sde.m_inv)
-                elif config.sde == 'active':
+                elif config.sde in ('active', 'chiral_active'):
                     v = np.sqrt(config.Ta / config.tau) * \
                         torch.normal(torch.zeros_like(x), torch.ones_like(x))
                 batch = torch.cat((x, v), dim=1)
