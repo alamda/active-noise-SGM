@@ -141,12 +141,12 @@ def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_ba
     elif dataset == 'ising_2D':
         num_classes = 1
         num_samples = int(args.n_train_iters * training_batch_size) + 1
-        train_data = Ising2DDataset(beta=args.ising_lattice_temp, \
+        train_data = Ising2DDataset(temperature=args.ising_lattice_temp, \
                                     N=args.ising_lattice_size, \
                                     num_steps=args.ising_num_equil_steps, \
                                     num_samples=num_samples)
         
-        valid_data = Ising2DDataset(beta=args.ising_lattice_temp, \
+        valid_data = Ising2DDataset(temperature=args.ising_lattice_temp, \
                                     N=args.ising_lattice_size, \
                                     num_steps=args.ising_num_equil_steps, \
                                     num_samples=num_samples)

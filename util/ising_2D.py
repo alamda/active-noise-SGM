@@ -3,8 +3,9 @@ from torch.utils.data import Dataset
 import torch
 
 class Ising2DDataset(Dataset):
-    def __init__(self, beta=None, N=None, num_steps=None, num_samples=None):
-        self.beta = beta
+    def __init__(self, temperature=None, N=None, num_steps=None, num_samples=None):
+        self.temperature = temperature
+        self.beta = float(1/self.temperature)
         self.N = N
         self.num_steps = num_steps
         self.num_samples = num_samples
