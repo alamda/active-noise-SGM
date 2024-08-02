@@ -140,6 +140,8 @@ if __name__ == '__main__':
     p.add('--mode', choices=['train', 'eval', 'continue', 'reverse_forces'], required=True)
     p.add('--cont_nbr', type=int, default=None)
     p.add('--checkpoint', default=None)
+    p.add('--save_train_data', action='store_true')
+    p.add('--max_save_train_data', type=int, default=None)
 
     p.add('--n_gpus_per_node', type=int, default=1)
     p.add('--n_nodes', type=int, default=1)

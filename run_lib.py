@@ -53,6 +53,7 @@ def train(config, workdir):
     checkpoint_dir = os.path.join(workdir, 'checkpoints')
     likelihood_dir = os.path.join(workdir, 'likelihood')
     fid_dir = os.path.join(workdir, 'fid')
+    train_data_dir = os.path.join(workdir, 'train_data')
 
     if global_rank == 0:
         logging.info(config)
@@ -62,6 +63,7 @@ def train(config, workdir):
             make_dir(likelihood_dir)
             make_dir(fid_dir)
             make_dir(tb_dir)
+            make_dir(train_data_dir)
         writer = tensorboard.SummaryWriter(tb_dir)
     dist.barrier()
 
@@ -156,10 +158,21 @@ def train(config, workdir):
         config.fid_threshold = max(step + 1, config.fid_threshold)
         config.save_threshold = max(step + 1, config.save_threshold)
 
+    num_saved_train = 0
+
     while step < num_total_iter:
         for _, (train_x, _) in enumerate(train_queue):
             if step >= num_total_iter:
                 break
+
+            if config.save_train_data is True and config.max_save_train_data is not None:
+                if num_saved_train <= config.max_save_train_data:
+                    save_img(train_x.clamp(0.0, 1.0), os.path.join(
+                        train_data_dir, f'train_{step}'), title=f"iter: {step}")
+                    
+                    np.save(os.path.join(train_data_dir, f'train_{step}'), train_x.cpu())
+                    
+                    num_saved_train += 1
 
             if step % config.eval_freq == 0 and step >= config.eval_threshold:
                 ema.store(score_model.parameters())
