@@ -1,4 +1,4 @@
-find . -name "sample*.png" | sort -V > pnglist.txt
+find . -maxdepth 2 -name "sample*.png" | sort -V > pnglist.txt
 
 montage -density 900 -tile 10x0 -geometry +5+50 -border 10 @pnglist.txt all_samples.png
 
