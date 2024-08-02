@@ -24,7 +24,7 @@ class Ising2DDataset(Dataset):
                     
         return num_bonds
     
-    def mc_steps(self, state=None, num_steps=1):
+    def mc_steps(self, state=None, num_steps=None):
         for _ in range(num_steps):
             a = np.random.randint(0, self.N)
             b = np.random.randint(0, self.N)
