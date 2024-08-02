@@ -43,10 +43,15 @@ if __name__=='__main__':
     
     axs[0].set_ylim(-1,1)
     axs[1].set_ylim(0,1)
+    
+    axs[0].set_title("Energy")
+    axs[1].set_title("|Magnetization|")
+    
+    axs[0].set_xlabel("iteration")
+    axs[1].set_xlabel("iteration")
 
     axs[0].scatter(iter_list, energy_list, clip_on=False)
     axs[1].scatter(iter_list, np.absolute(np.array(mag_list)), clip_on=False)
     
-    plt.show()
-            
-            
+    plt.savefig("e_and_m.png")
+    plt.close()        
