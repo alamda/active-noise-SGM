@@ -15,29 +15,49 @@ if __name__=='__main__':
     energy_list = []
     mag_list = []
     
-    for dirs in all_subdirs:
-        if 'iter_' in dirs:
-            dir_name = dirs
-            iter_num_str = dir_name.replace('iter_', '')
-            
-            iter_num = int(iter_num_str)
-            
-            iter_list.append(iter_num)
-            
-            if os.path.isfile(os.path.join(dirs, "sample_x.npy")):
-                file_path = os.path.join(dirs, "sample_x.npy")
-            elif os.path.isfile(os.path.join(dirs, "sample.npy")):
-                file_path = os.path.join(dirs, "sample.npy")
-            
-            state = np.load(file_path)
-            
-            state = np.reshape(state, (state.shape[-2], state.shape[-1]))
-            
-            ising = Ising2D(state=state)
-            
-            energy_list.append(ising.energy/state.size)
-            mag_list.append(ising.mag/state.size)
-            
+    if len(all_subdirs) > 0:
+        plot_color='#1f77b4'
+        for dirs in all_subdirs:
+            if 'iter_' in dirs:
+                dir_name = dirs
+                iter_num_str = dir_name.replace('iter_', '')
+                
+                iter_num = int(iter_num_str)
+                
+                iter_list.append(iter_num)
+                
+                if os.path.isfile(os.path.join(dirs, "sample_x.npy")):
+                    file_path = os.path.join(dirs, "sample_x.npy")
+                elif os.path.isfile(os.path.join(dirs, "sample.npy")):
+                    file_path = os.path.join(dirs, "sample.npy")
+                
+                state = np.load(file_path)
+                
+                state = np.reshape(state, (state.shape[-2], state.shape[-1]))
+                
+                ising = Ising2D(state=state)
+                
+                energy_list.append(ising.energy/state.size)
+                mag_list.append(ising.mag/state.size)
+    else:
+        plot_color='#ff7f0e'
+        files = [f for f in os.listdir('.') if os.path.isfile(f)]
+        
+        for file in files:
+            if '.npy' in file:
+                iter_num_str = file.replace('train_', '').replace('.npy', '')
+                iter_num = int(iter_num_str)
+                
+                iter_list.append(iter_num)
+                
+                state = np.load(file)
+                
+                state = np.reshape(state, (state.shape[-2], state.shape[-1]))
+                
+                ising = Ising2D(state=state)
+                
+                energy_list.append(ising.energy/state.size)
+                mag_list.append(ising.mag/state.size)
     
     fig, axs = plt.subplots(1, 2)
     
@@ -50,8 +70,8 @@ if __name__=='__main__':
     axs[0].set_xlabel("iteration")
     axs[1].set_xlabel("iteration")
 
-    axs[0].scatter(iter_list, energy_list, clip_on=False)
-    axs[1].scatter(iter_list, np.absolute(np.array(mag_list)), clip_on=False)
+    axs[0].scatter(iter_list, energy_list, clip_on=False, color=plot_color)
+    axs[1].scatter(iter_list, np.absolute(np.array(mag_list)), clip_on=False, color=plot_color)
     
     plt.savefig("e_and_m.png")
     plt.close()
