@@ -54,4 +54,20 @@ if __name__=='__main__':
     axs[1].scatter(iter_list, np.absolute(np.array(mag_list)), clip_on=False)
     
     plt.savefig("e_and_m.png")
+    plt.close()
+    
+    fig, axs = plt.subplots(1, 2)
+    
+    num_bins = 10
+    
+    axs[0].set_ylim(0,3.5)
+    axs[1].set_ylim(0,3.5)
+    
+    axs[0].set_title("Energy")
+    axs[1].set_title("|Magnetization|")
+
+    axs[0].hist(energy_list, bins=num_bins, range=(-4,0), density=True, color=plot_color)
+    axs[1].hist(mag_list, bins=num_bins, range=(-1,1), density=True, color=plot_color)
+    
+    plt.savefig("hist_e_and_m.png")
     plt.close()        
