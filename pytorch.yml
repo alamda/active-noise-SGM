@@ -6,6 +6,7 @@ channels:
   - defaults
   - bioconda/label/cf201901
   - conda-forge
+  - nvidia
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_kmp_llvm
@@ -366,7 +367,7 @@ dependencies:
       - protobuf==3.20.3
       - pyasn1==0.6.0
       - pyasn1-modules==0.4.0
-      - python-graphviz==0.20.3
+      - graphviz==0.20.3
       - requests-oauthlib==2.0.0
       - rsa==4.9
       - tensorboard==2.8.0
