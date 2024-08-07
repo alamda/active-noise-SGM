@@ -22,6 +22,8 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 import tensorflow_hub as tfhub
 
+INCEPTION_OFFLINE = './inception1'
+INCEPTION_v3_OFFLINE = './inception3'
 INCEPTION_TFHUB = 'https://tfhub.dev/tensorflow/tfgan/eval/inception/1'
 INCEPTION_OUTPUT = 'logits'
 INCEPTION_FINAL_POOL = 'pool_3'
@@ -32,12 +34,18 @@ _DEFAULT_DTYPES = {
 INCEPTION_DEFAULT_IMAGE_SIZE = 299
 
 
-def get_inception_model(inceptionv3=False):
+def get_inception_model(inceptionv3=False, offline=False):
     if inceptionv3:
-        return tfhub.load(
-            'https://tfhub.dev/google/imagenet/inception_v3/feature_vector/4')
+        if offline:
+            return tfhub.load(INCEPTION_v3_OFFLINE)
+        else:
+            return tfhub.load(
+                'https://tfhub.dev/google/imagenet/inception_v3/feature_vector/4')
     else:
-        return tfhub.load(INCEPTION_TFHUB)
+        if offline:
+            return tfhub.load(INCEPTION_OFFLINE)
+        else:
+            return tfhub.load(INCEPTION_TFHUB)
 
 
 def load_dataset_stats(config):

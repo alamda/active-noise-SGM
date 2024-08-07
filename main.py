@@ -133,6 +133,7 @@ if __name__ == '__main__':
     p = configargparse.ArgParser()
     p.add('-cc', is_config_file=True)
     p.add('-sc', is_config_file=True)
+    p.add('--offline', action='store_true')
 
     p.add('--root')
     p.add('--workdir', required=True)

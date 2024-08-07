@@ -143,7 +143,7 @@ def train(config, workdir):
     likelihood_fn = likelihood.get_likelihood_fn(config, sde)
 
     inceptionv3 = config.image_size >= 256
-    inception_model = evaluation.get_inception_model(inceptionv3=inceptionv3)
+    inception_model = evaluation.get_inception_model(inceptionv3=inceptionv3, offline=config.offline)
 
     step = int(state['step'])
     if global_rank == 0:

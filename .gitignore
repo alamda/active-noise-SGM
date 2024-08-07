@@ -12,6 +12,9 @@ misc/*.gif
 alanine_dipeptide/
 misc/gifs/
 
+inception*/
+*.tar.gz
+
 #Simulations subdirectories
 vpsde_*/
 cld_*/
