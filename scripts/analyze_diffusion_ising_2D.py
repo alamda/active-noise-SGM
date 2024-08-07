@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../"))
 
 from util.ising_2D import Ising2D
 
-if __name__=='__main__':
+def get_data():
     all_subdirs = [d for d in os.listdir('.') if os.path.isdir(d)]
     
     iter_list = []
@@ -19,6 +19,7 @@ if __name__=='__main__':
         plot_color='#1f77b4'
         for dirs in all_subdirs:
             if 'iter_' in dirs:
+                title = f'Diffusion Samples (Training Cumulative)'
                 dir_name = dirs
                 iter_num_str = dir_name.replace('iter_', '')
                 
@@ -41,6 +42,8 @@ if __name__=='__main__':
                 mag_list.append(ising.mag/state.size)
     else:
         plot_color='#ff7f0e'
+        title = f'Training Data'
+        
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         
         for file in files:
@@ -58,8 +61,13 @@ if __name__=='__main__':
                 
                 energy_list.append(ising.energy/state.size)
                 mag_list.append(ising.mag/state.size)
+    return iter_list, energy_list, mag_list, title, plot_color
+
+def plot_e_and_m(iter_list, energy_list, mag_list, title, plot_color):
+    fig, axs = plt.subplots(1, 2, layout='constrained')
     
-    fig, axs = plt.subplots(1, 2)
+    if title is not None:
+        fig.suptitle(title)
     
     axs[0].set_ylim(-1,1)
     axs[1].set_ylim(0,1)
@@ -75,8 +83,12 @@ if __name__=='__main__':
     
     plt.savefig("e_and_m.png")
     plt.close()
+
+def plot_e_and_m_hist(energy_list, mag_list, title, plot_color):
+    fig, axs = plt.subplots(1, 2, layout='constrained')
     
-    fig, axs = plt.subplots(1, 2)
+    if title is not None:
+        fig.suptitle(title)
     
     num_bins = 10
     
@@ -90,4 +102,28 @@ if __name__=='__main__':
     axs[1].hist(mag_list, bins=num_bins, range=(-1,1), density=True, color=plot_color)
     
     plt.savefig("hist_e_and_m.png")
-    plt.close()        
+    plt.close()
+
+    
+def plot_mag_hist(mag_list, title, plot_color):
+    fig, ax = plt.subplots(1, layout='constrained')
+    
+    fig.set_size_inches(3.5, 4.8)
+    
+    if title is not None:
+        fig.suptitle(title)
+    
+    num_bins = 10
+
+    ax.set_ylim(0,3.5)
+    ax.set_xlabel("|Magnetization|")
+
+    ax.hist(mag_list, bins=num_bins, range=(-1,1), density=True, color=plot_color)
+    
+    plt.savefig("hist_mag.png")
+    plt.close()
+    
+if __name__=='__main__':
+    iter_list, energy_list, mag_list, title, plot_color = get_data() 
+    
+    plot_mag_hist(mag_list, title, plot_color)  
