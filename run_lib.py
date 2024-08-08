@@ -373,8 +373,13 @@ def evaluate(config, workdir):
     ema = ExponentialMovingAverage(
         score_model.parameters(), decay=config.ema_rate)
 
-    scaler = get_data_scaler(config)
-    inverse_scaler = get_data_inverse_scaler(config)
+    # Utility functions to map images from [0, 1] to [-1, 1] and back.
+    if config.dataset == 'ising_2D':
+        scaler = get_data_scaler_ising(config)
+        inverse_scaler = get_data_inverse_scaler_ising(config)
+    else:
+        scaler = get_data_scaler(config)
+        inverse_scaler = get_data_inverse_scaler(config)
 
     optim_params = score_model.parameters()
     optimizer = get_optimizer(config, optim_params)
