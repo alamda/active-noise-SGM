@@ -395,7 +395,7 @@ def evaluate(config, workdir):
     likelihood_fn = likelihood.get_likelihood_fn(config, sde)
 
     inceptionv3 = config.image_size >= 256
-    inception_model = evaluation.get_inception_model(inceptionv3=inceptionv3)
+    inception_model = evaluation.get_inception_model(inceptionv3=inceptionv3, offline=config.offline)
 
     ckpt_path = os.path.join(checkpoint_dir, config.ckpt_file)
     state = restore_checkpoint(ckpt_path, state, device=config.device)
