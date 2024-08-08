@@ -449,7 +449,7 @@ def evaluate(config, workdir):
             np.save(os.path.join(fid_dir, 'nfes_%d_%d.npy' %
                     (r, global_rank)), np.array([nfe]))
             np.save(os.path.join(fid_dir, 'samples_%d_%d.npy' %
-                    (r, global_rank)), samples)
+                    (r, global_rank)), samples.cpu())
 
         dist.barrier()
 
@@ -508,7 +508,7 @@ def evaluate(config, workdir):
             np.save(os.path.join(samples_dir, 'nfes_%d_%d.npy' %
                     (r, global_rank)), np.array([nfe]))
             np.save(os.path.join(fid_dir, 'samples_%d_%d.npy' %
-                            (r, global_rank)), samples)
+                            (r, global_rank)), samples.cpu())
 
         dist.barrier()
 
