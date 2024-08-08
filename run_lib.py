@@ -498,11 +498,17 @@ def evaluate(config, workdir):
             x, _, nfe = sampling_fn(score_model)
             x = inverse_scaler(x)
             samples = x.clamp(0.0, 1.0)
+            
+            save_img(samples, os.path.join(
+                    fid_dir, 'sample_%d_%d.png' %
+                    (r, global_rank)))
 
             torch.save(samples, os.path.join(
                 samples_dir, 'samples_%d_%d.pth' % (r, global_rank)))
             np.save(os.path.join(samples_dir, 'nfes_%d_%d.npy' %
                     (r, global_rank)), np.array([nfe]))
+            np.save(os.path.join(fid_dir, 'samples_%d_%d.npy' %
+                            (r, global_rank)), samples)
 
         dist.barrier()
 
