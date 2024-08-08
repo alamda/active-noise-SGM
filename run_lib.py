@@ -333,6 +333,8 @@ def train(config, workdir):
         logging.info('Saving final checkpoint.')
         save_checkpoint(os.path.join(
             checkpoint_dir, 'final_checkpoint.pth'), state)
+        save_checkpoint(os.path.join(
+            checkpoint_dir, 'checkpoint.pth'), state)
     dist.barrier()
 
 
