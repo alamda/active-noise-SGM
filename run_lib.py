@@ -500,14 +500,14 @@ def evaluate(config, workdir):
             samples = x.clamp(0.0, 1.0)
             
             save_img(samples, os.path.join(
-                    fid_dir, 'sample_%d_%d.png' %
+                    samples_dir, 'sample_%d_%d.png' %
                     (r, global_rank)))
 
             torch.save(samples, os.path.join(
                 samples_dir, 'samples_%d_%d.pth' % (r, global_rank)))
             np.save(os.path.join(samples_dir, 'nfes_%d_%d.npy' %
                     (r, global_rank)), np.array([nfe]))
-            np.save(os.path.join(fid_dir, 'samples_%d_%d.npy' %
+            np.save(os.path.join(samples_dir, 'samples_%d_%d.npy' %
                             (r, global_rank)), samples.cpu())
 
         dist.barrier()
