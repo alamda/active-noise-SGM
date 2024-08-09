@@ -41,14 +41,27 @@ def get_data():
                 energy_list.append(ising.energy/state.size)
                 mag_list.append(ising.mag/state.size)
     else:
-        plot_color='#ff7f0e'
-        title = f'Training Data'
         
         files = [f for f in os.listdir('.') if os.path.isfile(f)]
         
         for file in files:
-            if '.npy' in file:
-                iter_num_str = file.replace('train_', '').replace('.npy', '')
+            if '.npy' in file and ('train' in file or 'samples' in file):
+
+                if 'train_' in file:
+                    plot_color='#ff7f0e'
+                    title = f'Training Data'
+                    iter_num_str = file.replace('train_', '').replace('.npy', '')
+                    hist_range=(-1.,1.)
+                elif ('samples_' in file) and not ('continuous' in file):
+                    iter_num_str = file.replace('samples_', '').replace('_0.npy', '')
+                    plot_color='green'
+                    title = f'Sampling Data'
+                    hist_range=(-1.,1.)
+                elif 'continuous_samples_' in file:
+                    iter_num_str = file.replace('continuous_samples_', '').replace('_0.npy', '')
+                    plot_color='purple'
+                    title = f'Generated Data (cont)'
+                    hist_range=None
                 iter_num = int(iter_num_str)
                 
                 iter_list.append(iter_num)
@@ -61,7 +74,7 @@ def get_data():
                 
                 energy_list.append(ising.energy/state.size)
                 mag_list.append(ising.mag/state.size)
-    return iter_list, energy_list, mag_list, title, plot_color
+    return iter_list, energy_list, mag_list, title, plot_color, hist_range
 
 def plot_e_and_m(iter_list, energy_list, mag_list, title, plot_color):
     fig, axs = plt.subplots(1, 2, layout='constrained')
@@ -105,7 +118,7 @@ def plot_e_and_m_hist(energy_list, mag_list, title, plot_color):
     plt.close()
 
     
-def plot_mag_hist(mag_list, title, plot_color):
+def plot_mag_hist(mag_list, title, plot_color, hist_range):
     fig, ax = plt.subplots(1, layout='constrained')
     
     fig.set_size_inches(3.5, 4.8)
@@ -118,12 +131,46 @@ def plot_mag_hist(mag_list, title, plot_color):
     ax.set_ylim(0,3.5)
     ax.set_xlabel("|Magnetization|")
 
-    ax.hist(mag_list, bins=num_bins, range=(-1,1), density=True, color=plot_color)
+    ax.hist(mag_list, bins=num_bins, range=hist_range, density=True, color=plot_color)
     
     plt.savefig("hist_mag.png")
     plt.close()
+
+def plot_spin_hists():
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+        
+    for file in files:
+        if '.npy' in file and 'samples' in file:
+
+            if ('samples_' in file) and not ('continuous' in file):
+                iter_num_str = file.replace('samples_', '').replace('_0.npy', '')
+                plot_color='green'
+                title = f'Sampling Data'
+                hist_range=(-1.,1.)
+            elif 'continuous_samples_' in file:
+                iter_num_str = file.replace('continuous_samples_', '').replace('_0.npy', '')
+                plot_color='purple'
+                title = f'Generated Data (cont)'
+                hist_range=None
+            iter_num = int(iter_num_str)
+            
+            iter_list.append(iter_num)
+            
+            state = np.load(file)
+            
+            # state = np.reshape(state, (state.shape[-2], state.shape[-1]))
+            state = state.flatten()
+            
+            fig, ax = plt.subplots(layout='constrained')
+            ax.hist(state)
+            
+            plt.savefig(f"cont_hist_{iter_num}.png")
+            plt.close()
+                
     
 if __name__=='__main__':
-    iter_list, energy_list, mag_list, title, plot_color = get_data() 
+    iter_list, energy_list, mag_list, title, plot_color, hist_range = get_data() 
     
-    plot_mag_hist(mag_list, title, plot_color)  
+    # plot_mag_hist(mag_list, title, plot_color, hist_range)  
+    
+    plot_spin_hists()

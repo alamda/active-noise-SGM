@@ -504,16 +504,32 @@ def evaluate(config, workdir):
             dist.barrier()
 
             x, _, nfe = sampling_fn(score_model)
-            x = inverse_scaler(x)
             
-            if config.dataset != 'ising_2D':
-                samples = x.clamp(0.0, 1.0)
-            else:
-                samples = x
+            if config.dataset == 'ising_2D':
+                import matplotlib.pyplot as plt
+                
+                fig, ax = plt.subplots(layout='constrained')
+                pic = ax.imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]), cmap='viridis')
+                fig.colorbar(pic, ax=ax)
+                plt.savefig(os.path.join(
+                    samples_dir, 'continuous_sample_%d_%d.png' %
+                    (r, global_rank)))
+                
+                plt.close()
+                
+                np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d.npy' %
+                            (r, globat stl_rank)), x.cpu())
+            
+            x = inverse_scaler(x)
+                        
+            samples = x.clamp(0.0, 1.0)
             
             save_img(samples, os.path.join(
                     samples_dir, 'sample_%d_%d.png' %
                     (r, global_rank)))
+            
+            if config.dataset == 'ising_2D':
+                samples = x
 
             torch.save(samples, os.path.join(
                 samples_dir, 'samples_%d_%d.pth' % (r, global_rank)))
