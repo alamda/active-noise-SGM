@@ -505,7 +505,11 @@ def evaluate(config, workdir):
 
             x, _, nfe = sampling_fn(score_model)
             x = inverse_scaler(x)
-            samples = x.clamp(0.0, 1.0)
+            
+            if config.dataset != 'ising_2D':
+                samples = x.clamp(0.0, 1.0)
+            else:
+                samples = x
             
             save_img(samples, os.path.join(
                     samples_dir, 'sample_%d_%d.png' %
