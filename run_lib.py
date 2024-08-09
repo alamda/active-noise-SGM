@@ -505,7 +505,7 @@ def evaluate(config, workdir):
 
             x, _, nfe = sampling_fn(score_model)
             
-            if config.dataset == 'ising_2D':
+            if (config.dataset == 'ising_2D') and config.debug:
                 import matplotlib.pyplot as plt
                 
                 fig, ax = plt.subplots(layout='constrained')
