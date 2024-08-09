@@ -224,7 +224,7 @@ def train(config, workdir):
                 save_img(x.clamp(0.0, 1.0), os.path.join(
                     this_sample_dir, 'sample.png'), title=f"iter: {step}")
 
-                if config.sde == 'cld':
+                if config.sde in ('cld', 'active', 'chiral_active'):
                     np.save(os.path.join(this_sample_dir, 'sample_x'), x.cpu())
                     np.save(os.path.join(this_sample_dir, 'sample_v'), v.cpu())
                 else:
@@ -366,8 +366,14 @@ def evaluate(config, workdir):
         sde = sde_lib.VPSDE(config, beta_fn, beta_int_fn)
     elif config.sde == 'cld':
         sde = sde_lib.CLD(config, beta_fn, beta_int_fn)
+    elif config.sde == 'passive':
+        sde = sde_lib.PassiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'active':
+        sde = sde_lib.ActiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'chiral_active':
+        sde = sde_lib.ChiralActiveDiffusion(config, beta_fn, beta_int_fn)
     else:
-        raise NotImplementedError('SDE %s is unknown.' % config.vpsde)
+        raise NotImplementedError('SDE %s is unknown.' % config.sde)
 
     score_model = mutils.create_model(config).to(config.device)
     broadcast_params(score_model.parameters())
