@@ -508,8 +508,12 @@ def evaluate(config, workdir):
             if (config.dataset == 'ising_2D') and config.debug:
                 import matplotlib.pyplot as plt
                 
+                x_mean = x.cpu().flatten().mean()
+                x_std = x.cpu().flatten().std()
+                
                 fig, ax = plt.subplots(layout='constrained')
                 pic = ax.imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]), cmap='viridis')
+                ax.set_title(f'mean: {x_mean}, std: {x_std}')
                 fig.colorbar(pic, ax=ax)
                 plt.savefig(os.path.join(
                     samples_dir, 'continuous_sample_%d_%d.png' %
@@ -518,7 +522,7 @@ def evaluate(config, workdir):
                 plt.close()
                 
                 np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d.npy' %
-                            (r, globat stl_rank)), x.cpu())
+                            (r, global_rank)), x.cpu())
             
             x = inverse_scaler(x)
                         

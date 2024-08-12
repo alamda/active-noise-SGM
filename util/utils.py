@@ -101,7 +101,7 @@ def get_data_scaler_ising(config):
     
 def get_data_inverse_scaler_ising(config):
     if (config.dataset == 'ising_2D') and config.is_image:
-        return lambda x: torch.where(torch.where(x == 0., random.choice([-1., 1.]), x) < 0, -1., 1.) #torch.sign(x)
+        return lambda x: torch.where(torch.where(x == 0., random.choice([-1., 1.]), x) < torch.mean(x), -1., 1.) #torch.sign(x)
 
 def compute_bpd_from_nll(nll, D, inverse_scaler):
     offset = 7 - inverse_scaler(-1)
