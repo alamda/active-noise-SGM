@@ -124,7 +124,23 @@ def main(config):
                 run_lib_toy.reverse_forces(config, workdir)
         else:
             raise ValueError('No experiment to evaluate.')
-    
+    elif config.mode == 'viz_forward':
+        if config.global_rank == 0: 
+            make_dir(workdir)
+            if config.viz_folder is None:
+                raise ValueError('Need to set viz folder')
+            viz_dir = os.path.join(workdir, config.viz_folder)
+            
+            make_dir(viz_dir)
+            gfile_stream = open(os.path.join(viz_dir, 'stdout.txt'), 'w')
+            set_logger(gfile_stream)
+            
+            if config.is_image:
+                import run_lib
+                run_lib.viz_forward(config, workdir)
+            else:
+                import run_lib_toy
+                run_lib_toy.viz_forward(config, workdir)
     else:
         raise ValueError('Mode not recognized.')
 
@@ -139,7 +155,8 @@ if __name__ == '__main__':
     p.add('--root')
     p.add('--workdir', required=True)
     p.add('--eval_folder', default=None)
-    p.add('--mode', choices=['train', 'eval', 'continue', 'reverse_forces'], required=True)
+    p.add('--viz_folder', default=None)
+    p.add('--mode', choices=['train', 'eval', 'continue', 'reverse_forces', 'viz_forward'], required=True)
     p.add('--cont_nbr', type=int, default=None)
     p.add('--checkpoint', default=None)
     p.add('--save_train_data', action='store_true')
