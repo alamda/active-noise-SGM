@@ -162,7 +162,20 @@ def save_img(x, filename, figsize=None, title=None):
     plt.close()
 
 
-def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, test=False):
+def debug_save_img(x, filename, figsize=None, title=None):
+    figsize = figsize if figsize is not None else (6,6)
+    
+    fig, ax = plt.subplots(layout='constrained')
+    fig.set_size_inches(figsize)
+    if title is not None:
+        ax.set_title(title, fontsize=20)
+    pic = ax.imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]))
+    fig.colorbar(pic, ax=ax)
+    
+    ax.figure.savefig(filename)
+    plt.close(fig)
+
+def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, test=False, step=None):
     if not test:
         n_batches = config.n_eval_batches
     else:
@@ -181,7 +194,7 @@ def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, tes
                 eval_x = scaler(eval_x)
             eval_x = eval_x.cuda()
 
-            eval_loss = eval_step_fn(state, eval_x, None)
+            eval_loss = eval_step_fn(state, eval_x, None, step=step)
             eval_loss = reduce_tensor(eval_loss, config.global_size)
             total_eval_loss += eval_loss * eval_x.shape[0] * config.global_size
             n_items += eval_x.shape[0] * config.global_size

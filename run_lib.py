@@ -19,7 +19,7 @@ from util.utils import calculate_frechet_distance
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
 from models import ncsnpp
-from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img
+from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img, debug_save_img
 from util.utils import compute_eval_loss, compute_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
 from util import datasets
 from util.checkpoint import save_checkpoint, restore_checkpoint
@@ -54,6 +54,7 @@ def train(config, workdir):
     likelihood_dir = os.path.join(workdir, 'likelihood')
     fid_dir = os.path.join(workdir, 'fid')
     train_data_dir = os.path.join(workdir, 'train_data')
+    debug_dir = os.path.join(workdir, 'debug')
 
     if global_rank == 0:
         logging.info(config)
@@ -64,6 +65,7 @@ def train(config, workdir):
             make_dir(fid_dir)
             make_dir(tb_dir)
             make_dir(train_data_dir)
+            make_dir(debug_dir)
         writer = tensorboard.SummaryWriter(tb_dir)
     dist.barrier()
 
@@ -130,8 +132,8 @@ def train(config, workdir):
     dist.barrier()
 
     optimize_fn = optimization_manager(config)
-    train_step_fn = losses.get_step_fn(True, optimize_fn, sde, config)
-    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config)
+    train_step_fn = losses.get_step_fn(True, optimize_fn, sde, config, debug_dir=debug_dir)
+    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config, debug_dir=debug_dir)
 
     sampling_shape = (config.sampling_batch_size,
                       config.image_channels,
@@ -178,7 +180,7 @@ def train(config, workdir):
                 ema.store(score_model.parameters())
                 ema.copy_to(score_model.parameters())
                 eval_loss = compute_eval_loss(
-                    config, state, eval_step_fn, valid_queue, scaler)
+                    config, state, eval_step_fn, valid_queue, step=step)
                 ema.restore(score_model.parameters())
 
                 if global_rank == 0:
@@ -214,13 +216,20 @@ def train(config, workdir):
                 ema.copy_to(score_model.parameters())
                 x, v, nfe = sampling_fn(score_model)
                 ema.restore(score_model.parameters())
+                
+                this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
+                make_dir(this_sample_dir)
+
+                if config.debug:
+                    debug_save_img(x, os.path.join(this_sample_dir, 'sample_x_debug.png'), title=f'iter: {step}')
+                    
+                    if config.sde in ('cld', 'active', 'chiral_active'):
+                        debug_save_img(v, os.path.join(this_sample_dir, 'sample_v_debug.png'), title=f'iter: {step}')
 
                 x = inverse_scaler(x)
                 logging.info('NFE for snapshot at step %d: %d' % (step, nfe))
                 writer.add_scalar('nfe', nfe, step)
-
-                this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
-                make_dir(this_sample_dir)
+                
                 save_img(x.clamp(0.0, 1.0), os.path.join(
                     this_sample_dir, 'sample.png'), title=f"iter: {step}")
 
@@ -316,7 +325,7 @@ def train(config, workdir):
 
             x = scaler(train_x)
             x = x.to(config.device)
-            loss = train_step_fn(state, x)
+            loss = train_step_fn(state, x, step=step)
 
             if step % config.log_freq == 0:
                 loss = reduce_tensor(loss, global_size)
@@ -353,10 +362,12 @@ def evaluate(config, workdir):
     checkpoint_dir = os.path.join(workdir, 'checkpoints')
     fid_dir = os.path.join(eval_dir, 'fid')
     samples_dir = os.path.join(eval_dir, 'samples')
+    debug_dir = os.path.join(eval_dir, 'debug')
     if global_rank == 0:
         logging.info(config)
         make_dir(fid_dir)
         make_dir(samples_dir)
+        make_dir(debug_dir)
     dist.barrier()
 
     beta_fn = build_beta_fn(config)
@@ -396,7 +407,7 @@ def evaluate(config, workdir):
     _, valid_queue, _ = datasets.get_loaders(config)
 
     optimize_fn = optimization_manager(config)
-    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config)
+    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config, debug_dir=debug_dir)
 
     sampling_shape = (config.sampling_batch_size,
                       config.image_channels,
@@ -421,7 +432,7 @@ def evaluate(config, workdir):
 
     if config.eval_loss:
         eval_loss = compute_eval_loss(
-            config, state, eval_step_fn, valid_queue, scaler, test=True)
+            config, state, eval_step_fn, valid_queue, scaler, test=True, step=step)
         if global_rank == 0:
             logging.info('Testing loss: %.5f' % eval_loss.item())
         dist.barrier()

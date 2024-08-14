@@ -8,12 +8,13 @@
 import torch
 from torch.cuda.amp import autocast, GradScaler
 import numpy as np
-from util.utils import add_dimensions
+from util.utils import add_dimensions, debug_save_img
 from models import utils as mutils
+import os
 
 
-def get_loss_fn(sde, train, config):
-    def loss_fn(model, x):
+def get_loss_fn(sde, train, config, debug_dir=None):
+    def loss_fn(model, x, step=None):
         # Setting up initial means
         if sde.is_augmented:
             if config.cld_objective == 'dsm':
@@ -26,11 +27,11 @@ def get_loss_fn(sde, train, config):
                 batch = torch.cat((x, v), dim=1)
             elif config.cld_objective == 'hsm':
                 # For HSM we are marginalizing over the full initial velocity
-                if config.sde == 'cld':
+                if config.sde in ('cld', 'active', 'chiral_active'):
                     v = torch.zeros_like(x, device=x.device)
-                elif config.sde in ('active', 'chiral_active'):
-                    v = np.sqrt(config.Ta / config.tau) * \
-                        torch.normal(torch.zeros_like(x), torch.ones_like(x))
+                # elif config.sde in ('active', 'chiral_active'):
+                #     v = np.sqrt(config.Ta / config.tau) * \
+                #         torch.normal(torch.zeros_like(x), torch.ones_like(x))
                 if config.data_dim == 1:
                     x = x.reshape((-1, 1))
                     v = v.reshape((-1,1))
@@ -38,14 +39,63 @@ def get_loss_fn(sde, train, config):
             else:
                 raise NotImplementedError(
                     'The objective %s for CLD-SGMs is not implemented.' % config.cld_objective)
+            if config.debug:
+                debug_save_img(x, 
+                               os.path.join(debug_dir, f'{step}_forward_t0_x.png'), 
+                               title=f'forward t=0 x, iter: {step}')
+                debug_save_img(v, 
+                               os.path.join(debug_dir, f'{step}_forward_t0_v.png'), 
+                               title=f'forward t=0 v, iter: {step}')
         else:
             batch = x
+            if config.debug:
+                debug_save_img(x, 
+                               os.path.join(debug_dir, f'{step}_forward_t0_x.png'), 
+                               title=f'forward t=0 x, iter: {step}')
 
         t = torch.rand(batch.shape[0], device=batch.device,
                        dtype=torch.float64) * (config.max_time - config.loss_eps) + config.loss_eps
-        perturbed_data, mean, _, batch_randn = sde.perturb_data(batch, t)
+        perturbed_data, mean, noise, batch_randn = sde.perturb_data(batch, t)
         perturbed_data = perturbed_data.type(torch.float32)
         mean = mean.type(torch.float32)
+        
+        if config.debug:
+            time = t.cpu().numpy()[0].round(3)
+            if sde.is_augmented:
+                perturbed_data_x, perturbed_data_v = torch.chunk(perturbed_data, 2, dim=1)
+                mean_x, mean_v = torch.chunk(mean, 2, dim=1)
+                noise_x, noise_v = torch.chunk(noise, 2, dim=1)
+                
+                debug_save_img(perturbed_data_x, 
+                               os.path.join(debug_dir, f'{step}_perturbed_data_x.png'), 
+                               title=f'perturbed data x, iter: {step}, t={time}')
+                debug_save_img(perturbed_data_v, 
+                               os.path.join(debug_dir, f'{step}_perturbed_data_v.png'), 
+                               title=f'perturbed data v, iter: {step}, t={time}')
+                
+                debug_save_img(mean_x, 
+                               os.path.join(debug_dir, f'{step}_mean_x.png'),
+                               title=f'mean x, iter: {step}, t={time}')
+                debug_save_img(mean_v,
+                               os.path.join(debug_dir, f'{step}_mean_v.png'),
+                               title=f'mean v, iter: {step}, t={time}')
+                
+                debug_save_img(noise_x,
+                               os.path.join(debug_dir, f'{step}_noise_x.png'),
+                               title=f'noise x, iter: {step}, t={time}')
+                debug_save_img(noise_v,
+                               os.path.join(debug_dir, f'{step}_noise_v.png'),
+                               title=f'noise v, iter: {step}, t={time}')
+            else:
+                debug_save_img(perturbed_data, 
+                               os.path.join(debug_dir, f'{step}_perturbed_data.png'), 
+                               title=f'perturbed data, iter: {step}, t={time}')
+                debug_save_img(mean, 
+                               os.path.join(debug_dir, f'{step}_mean.png'), 
+                               title=f'mean, iter: {step}, t={time}')
+                debug_save_img(noise,
+                               os.path.join(debug_dir, f'{step}_noise.png'),
+                               title=f'noise, iter: {step}, t={time}')
 
         # In the augmented case, we only need "velocity noise" for the loss
         if sde.is_augmented:
@@ -54,6 +104,11 @@ def get_loss_fn(sde, train, config):
             
             if config.data_dim == 1:
                 batch_randn = batch_randn.flatten()
+                
+        if config.debug:
+            debug_save_img(batch_randn, 
+                           os.path.join(debug_dir, f'{step}_batch_randn.png'), 
+                           title=f'batch_randn, iter: {step}')
         
         score_fn = mutils.get_score_fn(config, sde, model, train)
         score = score_fn(perturbed_data, t)
@@ -83,19 +138,19 @@ def get_loss_fn(sde, train, config):
     return loss_fn
 
 
-def get_step_fn(train, optimize_fn, sde, config):
-    loss_fn = get_loss_fn(sde, train, config)
+def get_step_fn(train, optimize_fn, sde, config, debug_dir=None):
+    loss_fn = get_loss_fn(sde, train, config, debug_dir=debug_dir)
 
     scaler = GradScaler() if config.autocast_train else None
 
-    def step_fn(state, batch, optimization=True):
+    def step_fn(state, batch, optimization=True, step=None):
         model = state['model']
 
         if train:
             optimizer = state['optimizer']
             optimizer.zero_grad()
             with autocast(enabled=config.autocast_train):
-                loss = torch.mean(loss_fn(model, batch))
+                loss = torch.mean(loss_fn(model, batch, step=step))
 
             if optimization:
                 if config.autocast_train:
