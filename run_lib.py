@@ -563,3 +563,134 @@ def evaluate(config, workdir):
             mean_nfe = np.mean(all_nfes)
             logging.info('Mean NFE: %.3f' % mean_nfe)
         dist.barrier()
+
+def viz_forward(config, workdir):
+    local_rank = config.local_rank
+    global_rank = config.global_rank
+    global_size = config.global_size
+
+    set_seeds(global_rank, config.seed)
+    
+    torch.cuda.device(local_rank)
+    config.device = torch.device('cuda:%d' % local_rank)
+    
+    forward_dir = os.path.join(workdir, 'forward')
+    
+    if global_rank == 0:
+        logging.info(config)
+        
+        make_dir(forward_dir)
+        
+    dist.barrier()
+    
+    beta_fn = build_beta_fn(config)
+    beta_int_fn = build_beta_int_fn(config)
+
+    if config.sde == 'vpsde':
+        sde = sde_lib.VPSDE(config, beta_fn, beta_int_fn)
+    elif config.sde == 'cld':
+        sde = sde_lib.CLD(config, beta_fn, beta_int_fn)
+    elif config.sde == 'passive':
+        sde = sde_lib.PassiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'active':
+        sde = sde_lib.ActiveDiffusion(config, beta_fn, beta_int_fn)
+    elif config.sde == 'chiral_active':
+        sde = sde_lib.ChiralActiveDiffusion(config, beta_fn, beta_int_fn)
+    else:
+        raise NotImplementedError('SDE %s is unknown.' % config.sde)
+    
+    train_queue, valid_queue, _ = datasets.get_loaders(config)
+    
+    time_arr = np.linspace(0.01, 0.25, 10)
+    
+    import matplotlib.pyplot as plt
+    from scipy.stats import multivariate_normal
+    
+    for train_idx, (train_x, _) in enumerate(train_queue):
+        
+        if sde.is_augmented:
+            train_v = torch.zeros_like(train_x)
+            
+            train = torch.cat((train_x, train_v), dim=1)
+        else:
+            train = train_x
+
+        if config.sde == 'passive':
+            sigma = config.Tp / config.k
+            gauss_x = np.linspace(-3, 3, 1000)
+            gauss_y = np.exp(-gauss_x**2/(2*(sigma)**2))/(np.sqrt(2*np.pi)*sigma)
+        elif config.sde == 'active':
+            sigma = config.Ta / config.tau
+            x_gauss_x = np.linspace(-3, 3, 1000)
+            eta_gauss_x = np.linspace(-5, 5, 1000)
+            
+            var_11 = 1/config.k * (config.Tp + config.Ta/(1+ config.k*config.tau))
+            var_12 = config.Ta/(1 + config.tau*config.k)
+            var_22 = config.Ta / config.tau
+    
+            var = multivariate_normal(mean=[0,0], cov=[[var_11,var_12],[var_12,var_22]])
+            x_gauss_y = np.array([var.pdf([x, 0]) for x in x_gauss_x])
+            eta_gauss_y = np.array([var.pdf([0,x]) for x in eta_gauss_x])
+            
+            dx_x = x_gauss_x[1]-x_gauss_x[0]
+            dx_eta = eta_gauss_x[1]-eta_gauss_x[0]
+            
+            x_gauss_y = x_gauss_y / (np.sum(x_gauss_y*dx_x))
+            eta_gauss_y = eta_gauss_y / (np.sum(eta_gauss_y*dx_eta))
+            
+            v_gauss_x = eta_gauss_x
+            v_gauss_y = eta_gauss_y
+        elif config.sde == 'cld':
+            sigma = np.sqrt(1 / config.m_inv)
+            x_gauss_x = np.linspace(-3, 3, 1000)
+            v_gauss_x = np.linspace(-1.5, 1.5, 1000)
+            
+            x_gauss_y = np.exp(-x_gauss_x**2/2)/(np.sqrt(2*np.pi))
+            v_gauss_y = np.exp(-v_gauss_x**2/(2*(sigma)**2))/(np.sqrt(2*np.pi)*sigma)
+
+        if sde.is_augmented:
+            fig, axs = plt.subplots(4, time_arr.shape[0], figsize=(20,6), layout='constrained')
+        else:
+            fig, axs = plt.subplots(2, time_arr.shape[0], figsize=(20,4), layout='constrained')
+        
+        hist_bins = 50
+        
+        for time_idx, time in enumerate(time_arr): 
+            time_tensor = torch.ones(train.shape[0])*time
+            perturbed_data, mean, noise, batch_randn = sde.perturb_data(train, time_tensor)
+            
+            if sde.is_augmented:
+                perturbed_data_x, perturbed_data_v = torch.chunk(perturbed_data, 2, dim=1)
+            else:
+                perturbed_data_x = perturbed_data
+            
+            if sde.is_augmented:
+                pic0 = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                axs[0,time_idx].set_title(f't={time.round(2)}, x')
+                axs[0,time_idx].axis('off')   
+                fig.colorbar(pic0, ax=axs[0,time_idx])
+                
+                axs[1,time_idx].hist(perturbed_data_x.flatten(), density=True, bins=hist_bins)
+                axs[1,time_idx].set_title(f'x hist')
+                axs[1,time_idx].plot(x_gauss_x, x_gauss_y)
+                
+                pic1 = axs[2,time_idx].imshow(perturbed_data_v.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                axs[2,time_idx].set_title(f't={time.round(2)}, v')
+                axs[2,time_idx].axis('off')
+                fig.colorbar(pic1, ax=axs[2,time_idx])
+                
+                axs[3,time_idx].hist(perturbed_data_v.flatten(), density=True, bins=hist_bins)
+                axs[3,time_idx].set_title(f'v hist')
+                axs[3,time_idx].plot(v_gauss_x, v_gauss_y)
+            else:
+                pic = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                axs[0,time_idx].set_title(f't={time.round(2)}, x')
+                axs[0,time_idx].axis('off')   
+                fig.colorbar(pic, ax=axs[0,time_idx])
+                
+                axs[1,time_idx].hist(perturbed_data_x.flatten(), density=True, bins=hist_bins)
+                axs[1,time_idx].set_title(f'x hist')
+                axs[1,time_idx].plot(gauss_x, gauss_y)
+
+        plt.savefig(os.path.join(forward_dir, f'{train_idx}_viz_fwd.png'))
+        plt.close(fig)
