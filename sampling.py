@@ -86,24 +86,24 @@ def get_ode_sampler(config, sde, sampling_shape, eps, debug_dir=None):
         '''
         score_fn = get_score_fn(config, sde, model, train=False)
         rsde = sde.get_reverse_sde(score_fn, probability_flow=True)
-        
+
         rsde_calc = rsde(u, t)
         
-        if config.debug:
-            for idx, rsde_step in enumerate(rsde_calc):
-                if sde.is_augmented:
-                    x, v = torch.chunk(rsde_step, 2, dim=1)
+        # if config.debug:
+        #     for idx, rsde_step in enumerate(rsde_calc):
+        #         if sde.is_augmented:
+        #             x, v = torch.chunk(rsde_step, 2, dim=1)
                     
-                    debug_save_img(x,
-                            os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_x.png'),
-                            title=f'prob flow ode x, t={t.round(3)}, {idx}')
-                    debug_save_img(v,
-                                os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_v.png'),
-                                title=f'prob flow ode v, t={t.round(3)}, {idx}')
-                else:
-                    debug_save_img(rsde_step,
-                                   os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_x.png'),
-                                   title=f'prob flow ode x, t={t.round(3)}, {idx}')
+        #             debug_save_img(x,
+        #                     os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_x.png'),
+        #                     title=f'prob flow ode x, t={t.round(3)}, {idx}')
+        #             debug_save_img(v,
+        #                         os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_v.png'),
+        #                         title=f'prob flow ode v, t={t.round(3)}, {idx}')
+        #         else:
+        #             debug_save_img(rsde_step,
+        #                            os.path.join(debug_dir, f'{t.round(3)}_{idx}_prob_flow_ode_x.png'),
+        #                            title=f'prob flow ode x, t={t.round(3)}, {idx}')
                 
         return rsde_calc[0]
 
@@ -116,20 +116,21 @@ def get_ode_sampler(config, sde, sampling_shape, eps, debug_dir=None):
                 else:
                     u = x
 
-            if config.debug:
-                if sde.is_augmented:
-                    x, v = torch.chunk(u, 2, dim=1)
+            # if config.debug:
+            #     if sde.is_augmented:
+            #         x, v = torch.chunk(u, 2, dim=1)
                     
-                    debug_save_img(x,
-                            os.path.join(debug_dir, f'ode_sampler_start_x.png'),
-                            title=f'ode sampler start x,')
-                    debug_save_img(v,
-                                os.path.join(debug_dir, f'ode_sampler_start_v.png'),
-                                title=f'ode sampler start v')
-                else:
-                    debug_save_img(u,
-                                   os.path.join(debug_dir, f'ode_sampler_start_x.png'),
-                                   title=f'ode sampler start x')
+            #         debug_save_img(x,
+            #                 os.path.join(debug_dir, f'ode_sampler_start_x.png'),
+            #                 title=f'ode sampler start x,')
+            #         debug_save_img(v,
+            #                     os.path.join(debug_dir, f'ode_sampler_start_v.png'),
+            #                     title=f'ode sampler start v')
+            #     else:
+            #         debug_save_img(u,
+            #                        os.path.join(debug_dir, f'ode_sampler_start_x.png'),
+            #                        title=f'ode sampler start x')
+
             def ode_func(t, u):
                 global nfe_counter
                 nfe_counter += 1
@@ -150,21 +151,21 @@ def get_ode_sampler(config, sde, sampling_shape, eps, debug_dir=None):
                               method=config.sampling_solver,
                               options=config.sampling_solver_options)
 
-            if config.debug:
-                for idx, soln_step in enumerate(solution):
-                    if sde.is_augmented:
-                        x, v = torch.chunk(soln_step, 2, dim=1)
+            # if config.debug:
+            #     for idx, soln_step in enumerate(solution):
+            #         if sde.is_augmented:
+            #             x, v = torch.chunk(soln_step, 2, dim=1)
                     
-                        debug_save_img(x,
-                                os.path.join(debug_dir, f'{idx}_solution_x.png'),
-                                title=f'solution x, {idx}')
-                        debug_save_img(v,
-                                    os.path.join(debug_dir, f'{idx}_solution_v.png'),
-                                    title=f'solution v, {idx}')
-                    else:
-                        debug_save_img(u,
-                                    os.path.join(debug_dir, f'{idx}_solution_x.png'),
-                                    title=f'solution x, {idx}')
+            #             debug_save_img(x,
+            #                     os.path.join(debug_dir, f'{idx}_solution_x.png'),
+            #                     title=f'solution x, {idx}')
+            #             debug_save_img(v,
+            #                         os.path.join(debug_dir, f'{idx}_solution_v.png'),
+            #                         title=f'solution v, {idx}')
+            #         else:
+            #             debug_save_img(u,
+            #                         os.path.join(debug_dir, f'{idx}_solution_x.png'),
+            #                         title=f'solution x, {idx}')
 
             u = solution[-1]
 
