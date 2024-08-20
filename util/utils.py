@@ -11,6 +11,7 @@ import torch
 import torch.distributed as dist
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import logging
 from scipy import linalg
 from torch.optim import Adamax, AdamW
@@ -162,7 +163,23 @@ def save_img(x, filename, figsize=None, title=None):
     plt.close()
 
 
-def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, test=False):
+def debug_save_img(x, filename, figsize=None, title=None):
+    figsize = figsize if figsize is not None else (4,6)
+    
+    fig, ax = plt.subplots(2, layout='constrained')
+    fig.set_size_inches(figsize)
+    if title is not None:
+        ax[0].set_title(title, fontsize=12)
+    pic = ax[0].imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]), norm=mpl.colors.CenteredNorm(), cmap='seismic')
+    fig.colorbar(pic, ax=ax)
+    ax[1].hist(x.cpu().flatten(), density=True)
+    xabs_max = abs(max(ax[1].get_xlim(), key=abs))
+    ax[1].set_xlim(xmin=-xabs_max, xmax=xabs_max)
+    
+    plt.savefig(filename)
+    plt.close(fig)
+
+def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, test=False, step=None):
     if not test:
         n_batches = config.n_eval_batches
     else:
@@ -181,7 +198,7 @@ def compute_eval_loss(config, state, eval_step_fn, valid_queue, scaler=None, tes
                 eval_x = scaler(eval_x)
             eval_x = eval_x.cuda()
 
-            eval_loss = eval_step_fn(state, eval_x, None)
+            eval_loss = eval_step_fn(state, eval_x, None, step=step)
             eval_loss = reduce_tensor(eval_loss, config.global_size)
             total_eval_loss += eval_loss * eval_x.shape[0] * config.global_size
             n_items += eval_x.shape[0] * config.global_size
