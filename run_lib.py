@@ -507,7 +507,7 @@ def evaluate(config, workdir):
 
     if config.eval_sample:
         num_sampling_rounds = config.eval_sample_samples // (
-            config.sampling_batch_size * global_size) + 1
+            config.sampling_batch_size * global_size) #+ 1
 
         for r in range(num_sampling_rounds):
             if global_rank == 0:
