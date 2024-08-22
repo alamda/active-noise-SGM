@@ -53,10 +53,11 @@ do
         echo "continuing $root_dir" >> $out_file
 	fi
 	
-	mode="eval --eval_sample --eval_sample_samples 10 --eval_folder eval --ckpt_file final_checkpoint.pth"
+	mode="eval --eval_sample --max_sampling_time 1 --eval_sample_samples 100 --eval_folder eval_ode_1 --ckpt_file final_checkpoint.pth"
 
     python main.py -cc ${dir}/config_ising_2D_${sim}_train.txt \
                    --offline \
+                   --debug \
                    --root $root_dir \
                    --workdir work_dir/dataset \
                    --dataset ising_2D \
