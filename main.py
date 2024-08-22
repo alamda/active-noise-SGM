@@ -266,6 +266,7 @@ if __name__ == '__main__':
     p.add('--save_threshold', type=int, default=1)
 
     # Sampling
+    p.add('--max_sampling_time', type=float, default=1.)
     p.add('--sampling_method', choices=['ode', 'em', 'sscs'], default='ode')
     p.add('--sampling_solver', default='scipy_solver')
     p.add('--sampling_solver_options',

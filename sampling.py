@@ -142,7 +142,7 @@ def get_ode_sampler(config, sde, sampling_shape, eps, debug_dir=None):
             global nfe_counter
             nfe_counter = 0
             time_tensor = torch.tensor(
-                [0., config.max_time - eps], dtype=torch.float64, device=config.device)
+                [0., config.max_sampling_time - eps], dtype=torch.float64, device=config.device)
             solution = odeint(ode_func,
                               u,
                               time_tensor,
