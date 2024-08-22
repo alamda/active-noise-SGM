@@ -54,6 +54,7 @@ do
 		
     python main.py -cc ${dir}/config_ising_2D_${sim}_train.txt \
                    --offline \
+				   --debug \
                    --root $root_dir \
                    --workdir work_dir/dataset \
                    --dataset ising_2D \
