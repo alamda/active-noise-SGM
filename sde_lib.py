@@ -373,7 +373,7 @@ class PassiveDiffusion(VPSDE):
             
         drift = - self.k * beta * u
         
-        diffusion = torch.sqrt(2 * beta * self.Tp)
+        diffusion = torch.sqrt(2 * beta * self.Tp)*torch.ones_like(u, device=self.config.device)
 
         return drift, diffusion
 
