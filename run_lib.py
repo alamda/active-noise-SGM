@@ -231,7 +231,10 @@ def train(config, workdir):
                 logging.info('NFE for snapshot at step %d: %d' % (step, nfe))
                 writer.add_scalar('nfe', nfe, step)
                 
-                save_img(x.clamp(0.0, 1.0), os.path.join(
+                # save_img(x.clamp(0.0, 1.0), os.path.join(
+                #     this_sample_dir, 'sample.png'), title=f"iter: {step}")
+                
+                debug_save_img(x, os.path.join(
                     this_sample_dir, 'sample.png'), title=f"iter: {step}")
 
                 if config.sde in ('cld', 'active', 'chiral_active'):
@@ -415,7 +418,7 @@ def evaluate(config, workdir):
                       config.image_size,
                       config.image_size)
     sampling_fn = sampling.get_sampling_fn(
-        config, sde, sampling_shape, config.sampling_eps)
+        config, sde, sampling_shape, config.sampling_eps, debug_dir=debug_dir)
 
     likelihood_fn = likelihood.get_likelihood_fn(config, sde)
 
@@ -526,6 +529,14 @@ def evaluate(config, workdir):
             
                 np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d.npy' %
                             (r, global_rank)), x.cpu())
+                
+                if sde.is_augmented:
+                    debug_save_img(v,
+                                os.path.join(samples_dir, f'sample_{r}_v.png'),
+                                title=f'v')
+
+                    np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d_v.npy' %
+                                (r, global_rank)), v.cpu())
             
             x = inverse_scaler(x)
                         
