@@ -12,6 +12,7 @@ import time
 import torch
 from torch.utils import tensorboard
 import numpy as np
+import matplotlib as mpl
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 
@@ -667,30 +668,39 @@ def viz_forward(config, workdir):
                 perturbed_data_x = perturbed_data
             
             if sde.is_augmented:
-                pic0 = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                pic0 = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]),
+                                              norm=mpl.colors.CenteredNorm(), cmap='seismic')
                 axs[0,time_idx].set_title(f't={time.round(2)}, x')
                 axs[0,time_idx].axis('off')   
                 fig.colorbar(pic0, ax=axs[0,time_idx])
                 
                 axs[1,time_idx].hist(perturbed_data_x.flatten(), density=True, bins=hist_bins)
+                xabs_max = abs(max(axs[1,time_idx].get_xlim(), key=abs))
+                axs[1,time_idx].set_xlim(xmin=-xabs_max, xmax=xabs_max)
                 axs[1,time_idx].set_title(f'x hist')
                 axs[1,time_idx].plot(x_gauss_x, x_gauss_y)
                 
-                pic1 = axs[2,time_idx].imshow(perturbed_data_v.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                pic1 = axs[2,time_idx].imshow(perturbed_data_v.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]),
+                                              norm=mpl.colors.CenteredNorm(), cmap='seismic')
                 axs[2,time_idx].set_title(f't={time.round(2)}, v')
                 axs[2,time_idx].axis('off')
                 fig.colorbar(pic1, ax=axs[2,time_idx])
                 
                 axs[3,time_idx].hist(perturbed_data_v.flatten(), density=True, bins=hist_bins)
+                xabs_max = abs(max(axs[3,time_idx].get_xlim(), key=abs))
+                axs[3,time_idx].set_xlim(xmin=-xabs_max, xmax=xabs_max)
                 axs[3,time_idx].set_title(f'v hist')
                 axs[3,time_idx].plot(v_gauss_x, v_gauss_y)
             else:
-                pic = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]))
+                pic = axs[0,time_idx].imshow(perturbed_data_x.reshape(perturbed_data.shape[-2], perturbed_data.shape[-1]),
+                                             norm=mpl.colors.CenteredNorm(), cmap='seismic')
                 axs[0,time_idx].set_title(f't={time.round(2)}, x')
                 axs[0,time_idx].axis('off')   
                 fig.colorbar(pic, ax=axs[0,time_idx])
                 
                 axs[1,time_idx].hist(perturbed_data_x.flatten(), density=True, bins=hist_bins)
+                xabs_max = abs(max(axs[1,time_idx].get_xlim(), key=abs))
+                axs[1,time_idx].set_xlim(xmin=-xabs_max, xmax=xabs_max)
                 axs[1,time_idx].set_title(f'x hist')
                 axs[1,time_idx].plot(gauss_x, gauss_y)
 
