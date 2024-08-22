@@ -514,24 +514,15 @@ def evaluate(config, workdir):
                 logging.info('sampling -- round: %d' % r)
             dist.barrier()
 
-            x, _, nfe = sampling_fn(score_model)
+            x, v, nfe = sampling_fn(score_model)
             
-            if (config.dataset == 'ising_2D') and config.debug:
-                import matplotlib.pyplot as plt
+            if (config.dataset == 'ising_2D') and config.debug:                
+
+                debug_save_img(x, os.path.join(samples_dir, 'sample_x_%d_%d.png' % (r, global_rank)), title=f'iter: {step}')
                 
-                x_mean = x.cpu().flatten().mean()
-                x_std = x.cpu().flatten().std()
-                
-                fig, ax = plt.subplots(layout='constrained')
-                pic = ax.imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]), cmap='viridis')
-                ax.set_title(f'mean: {x_mean}, std: {x_std}')
-                fig.colorbar(pic, ax=ax)
-                plt.savefig(os.path.join(
-                    samples_dir, 'continuous_sample_%d_%d.png' %
-                    (r, global_rank)))
-                
-                plt.close()
-                
+                if config.sde in ('cld', 'active', 'chiral_active'):
+                    debug_save_img(v, os.path.join(samples_dir, 'sample_v_%d_%d.png' % (r, global_rank)), title=f'iter: {step}')
+            
                 np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d.npy' %
                             (r, global_rank)), x.cpu())
             
