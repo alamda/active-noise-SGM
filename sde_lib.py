@@ -107,7 +107,7 @@ class CLD(nn.Module):
             v.view(v.shape[0], -1) ** 2., dim=1) * self.m_inv / 2.
         return logx, logv
 
-    def mean(self, u, t):
+    def mean(self, u, t, beta_int=None):
         '''
         Evaluating the mean of the conditional perturbation kernel.
         '''
@@ -117,7 +117,9 @@ class CLD(nn.Module):
             x = x.flatten()
             v = v.flatten()
 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        if beta_int is None:
+            beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        
         coeff_mean = torch.exp(-2. * beta_int * self.g)
 
         mean_x = coeff_mean * (2. * beta_int * self.g *
@@ -130,7 +132,7 @@ class CLD(nn.Module):
             
         return torch.cat((mean_x, mean_v), dim=1)
 
-    def var(self, t, var0x=None, var0v=None):
+    def var(self, t, var0x=None, var0v=None, beta_int=None):
         '''
         Evaluating the variance of the conditional perturbation kernel.
         '''
@@ -147,7 +149,9 @@ class CLD(nn.Module):
 
             var0v = add_dimensions(var0v, self.config.is_image, dim=self.config.data_dim)
 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        if beta_int is None:
+            beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        
         multiplier = torch.exp(-4. * beta_int * self.g)
 
         var_xx = var0x + (1. / multiplier) - 1. + 4. * beta_int * self.g * (var0x - 1.) + 4. * \
@@ -483,8 +487,9 @@ class ActiveDiffusion(CLD):
         
         return sample_x, sample_eta
     
-    def var(self, t, var0x=None, var0v=None):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+    def var(self, t, var0x=None, var0v=None, beta_int=None):
+        if beta_int is None:
+            beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         
         k = self.k      
         w = 1 / self.tau
@@ -507,8 +512,9 @@ class ActiveDiffusion(CLD):
 
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
     
-    def mean(self, batch, t):
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+    def mean(self, batch, t, beta_int=None):
+        if beta_int is None:
+            beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         
         k = self.k
         w = 1/self.tau
