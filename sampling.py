@@ -170,7 +170,7 @@ def get_ode_sampler(config, sde, sampling_shape, eps, debug_dir=None):
             u = solution[-1]
 
             if config.denoising:
-                u = denoising_fn(model, u, config.max_time - eps)
+                u = denoising_fn(model, u, config.max_sampling_time - eps)
                 nfe_counter += 1
 
             if sde.is_augmented:
@@ -206,7 +206,7 @@ def get_em_sampler(config, sde, sampling_shape, eps):
                     u = x
 
             n_discrete_steps = config.n_discrete_steps if not config.denoising else config.n_discrete_steps - 1
-            t_final = config.max_time - eps
+            t_final = config.max_sampling_time - eps
             t = torch.linspace(
                 0., t_final, n_discrete_steps + 1, dtype=torch.float64)
             if config.striding == 'linear':
@@ -238,7 +238,7 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
     gc.collect()
 
     n_discrete_steps = config.n_discrete_steps if not config.denoising else config.n_discrete_steps - 1
-    t_final = config.max_time - eps
+    t_final = config.max_sampling_time - eps
     t = torch.linspace(0., t_final, n_discrete_steps + 1, dtype=torch.float64)
     if config.striding == 'linear':
         pass
