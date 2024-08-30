@@ -172,24 +172,13 @@ def get_sscs_sampler(config, sde, sampling_shape, eps):
 
     def compute_mean_of_analytical_dynamics(u, t, dt):
         B = (beta_int_fn(config.max_time - (t + dt)) - beta_int_fn(config.max_time - t))
-
-        x, v = torch.chunk(u, 2, dim=1)
-        coeff = torch.exp(2. * sde.g * B)
-
-        mean_x = coeff * ((1. - 2. * sde.g * B) * x + 4. * sde.g ** 2. * B * v)
-        mean_v = coeff * (-B * x + (1. + 2. * sde.g * B) * v)
-        return torch.cat((mean_x, mean_v), dim=1)
+        
+        return sde.mean(u, t, beta_int=B)
 
     def compute_variance_of_analytical_dynamics(t, dt):
         B = beta_int_fn(config.max_time - (t + dt)) - beta_int_fn(config.max_time - t)
-        coeff = torch.exp(4. * sde.g * B)
-        var_xx = coeff * (1. / coeff - 1. + 4. * sde.g *
-                          B - 8. * sde.g**2 * B ** 2.)
-        var_xv = -coeff * (4. * sde.g * B ** 2.)
-        var_vv = coeff * (-sde.f ** 2. * (-(1. / coeff) +
-                          1.) / 4. - sde.f * B - 2. * B ** 2.)
 
-        return [var_xx + num_stab, var_xv, var_vv + num_stab]
+        return sde.var(t, beta_int=B)
 
     def analytical_dynamics(u, t, dt, half_step):
         if half_step:
