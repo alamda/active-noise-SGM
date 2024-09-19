@@ -57,7 +57,7 @@ def load_dataset_stats(config):
             'No FID statistics for %s are available' % config.dataset)
 
     with tf.io.gfile.GFile(filename, 'rb') as fin:
-        stats = np.load(fin)
+        stats = np.load(fin, allow_pickle=True)
         return stats
 
 
