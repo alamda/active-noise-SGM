@@ -38,14 +38,19 @@ def get_loaders(args):
 
 
 def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_batch_size, augment=True, drop_last_train=True, shuffle_train=True, args=None):
+    if args.offline:
+        download = False
+    else:
+        download = True
+    
     if dataset == 'cifar10':
         num_classes = 10
         train_transform, valid_transform = _data_transforms_cifar10()
         train_transform = train_transform if augment else valid_transform
         train_data = dset.CIFAR10(
-            root=root, train=True, download=True, transform=train_transform)
+            root=root, train=True, download=download, transform=train_transform)
         valid_data = dset.CIFAR10(
-            root=root, train=False, download=True, transform=valid_transform)
+            root=root, train=False, download=download, transform=valid_transform)
     elif dataset.startswith('celeba'):
         if dataset == 'celeba_64':
             resize = 64
