@@ -70,7 +70,7 @@ class ResNet(nn.Module):
         self.n_hidden_layers = n_hidden_layers
 
         self.x_input = True
-        self.z_input = True if config.sde == 'cld' else False
+        self.z_input = True if config.sde in ('cld', 'active', 'chiral_active') else False
 
         if self.x_input and self.z_input:
             in_dim = input_dim * 2 + index_dim
