@@ -275,19 +275,19 @@ def train(config, workdir):
                         (-1, config.image_size, config.image_size, config.image_channels))
 
                     latents = evaluation.run_inception_distributed(
-                        samples, inception_model, inceptionv3=inceptionv3)
-                    np.save(os.path.join(fid_dir, 'statistics_%d_rank_%d_pool.npy' % (
-                        r, global_rank)), latents['pool_3'])
-                    np.save(os.path.join(fid_dir, 'nfes_%d_%d.npy' %
+                          samples, inception_model, inceptionv3=inceptionv3)
+                    np.save(os.path.join(this_sample_dir, 'statistics_%d_rank_%d_pool.npy' % (
+                             r, global_rank)), latents['pool_3'])
+                    np.save(os.path.join(this_sample_dir, 'nfes_%d_%d.npy' %
                             (r, global_rank)), np.array([nfe]))
-                    np.save(os.path.join(fid_dir, 'samples_%d_%d.npy' %
+                    np.save(os.path.join(this_sample_dir, 'samples_%d_%d.npy' %
                             (r, global_rank)), samples)
 
                 dist.barrier()
                 ema.restore(score_model.parameters())
 
                 all_pool = []
-                for pool_file in glob.glob(os.path.join(fid_dir, 'statistics_*_pool.npy')):
+                for pool_file in glob.glob(os.path.join(this_sample_dir, 'statistics_*_pool.npy')):
                     stat = np.load(pool_file)
                     all_pool.append(stat)
                 all_pool = np.concatenate(all_pool, axis=0)[
@@ -296,7 +296,7 @@ def train(config, workdir):
                     raise ValueError('Not enough FID samples.')
 
                 all_nfes = []
-                for nfe_file in glob.glob(os.path.join(fid_dir, 'nfes_*.npy')):
+                for nfe_file in glob.glob(os.path.join(this_sample_dir, 'nfes_*.npy')):
                     nfe = np.load(nfe_file)
                     all_nfes.append(nfe)
                 all_nfes = np.concatenate(all_nfes, axis=0)
@@ -313,7 +313,7 @@ def train(config, workdir):
                         data_pools_mean, data_pools_sigma, all_pool_mean, all_pool_sigma)
                     logging.info('FID: %.6f' % fid)
                     result_arr = np.array([fid])
-                    np.save(os.path.join(fid_dir, 'report.npy'), result_arr)
+                    np.save(os.path.join(this_sample_dir, 'report.npy'), result_arr)
 
                     mean_nfe = np.mean(all_nfes)
                     logging.info('Mean NFE: %.3f' % mean_nfe)
