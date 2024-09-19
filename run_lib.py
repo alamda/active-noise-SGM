@@ -160,6 +160,10 @@ def train(config, workdir):
             step + 1, config.likelihood_threshold)
         config.fid_threshold = max(step + 1, config.fid_threshold)
         config.save_threshold = max(step + 1, config.save_threshold)
+        continue_fallback_bool = True
+    else:
+        continue_fallback_bool = False
+
 
     num_saved_train = 0
 
@@ -208,7 +212,7 @@ def train(config, workdir):
                         save_checkpoint(checkpoint_file, state)
                 dist.barrier()
 
-            if step % config.snapshot_freq == 0 and global_rank == 0 and step >= config.snapshot_threshold:
+            if (step % config.snapshot_freq == 0 and global_rank == 0 and step >= config.snapshot_threshold): # or (continue_fallback_bool):
                 logging.info('Saving snapshot checkpoint.')
                 save_checkpoint(os.path.join(
                     checkpoint_dir, 'checkpoint.pth'), state)
@@ -243,8 +247,9 @@ def train(config, workdir):
                 else:
                     np.save(os.path.join(this_sample_dir, 'sample'), x.cpu())
             dist.barrier()
+            
+            if (step % config.fid_freq == 0 and step >= config.fid_threshold) or (step >= config.fid_threshold and continue_fallback_bool):
 
-            if step % config.fid_freq == 0 and step >= config.fid_threshold:
                 this_sample_dir = os.path.join(fid_dir, 'step_%d' % step)
                 if global_rank == 0:
                     make_dir(this_sample_dir)
@@ -340,6 +345,7 @@ def train(config, workdir):
                 dist.barrier()
 
             step += 1
+            continue_fallback_bool = False
 
     if global_rank == 0:
         logging.info('Finished after %d iterations.' % config.n_train_iters)
