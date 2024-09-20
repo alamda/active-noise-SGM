@@ -430,14 +430,13 @@ class ActiveDiffusion(CLD):
         Ta = self.Ta
 
         x, eta = torch.chunk(u, 2, dim=1)
-        
         if self.config.data_dim == 2:
             x = torch.reshape(x, (-1,2))
             eta = torch.reshape(eta, (-1,2))
         elif self.config.data_dim == 1:
             x = x.flatten()
             eta = eta.flatten()
-        
+
         drift_x = - k * beta * x + beta*eta
         drift_eta =  - beta *eta / tau
         
@@ -478,7 +477,7 @@ class ActiveDiffusion(CLD):
         sample_2x = sample_2x.reshape(shape)
         sample_2eta = sample_2eta.reshape(shape)
         
-        if self.config.data_dim == 1 or self.config.dataset == 'ising_2D':
+        if self.config.data_dim == 1 or self.config.is_image:
             sample_x = sample_1x
             sample_eta = sample_1eta
         else:
