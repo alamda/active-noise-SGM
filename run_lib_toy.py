@@ -372,28 +372,12 @@ def evaluate(config, workdir):
         inverse_scaler = get_data_inverse_scaler(config)
         num_sampling_rounds = config.eval_sample_samples // (
             config.sampling_batch_size * global_size) + 1
-
-        for r in range(num_sampling_rounds):
-            if global_rank == 0:
-                logging.info('sampling -- round: %d' % r)
-            dist.barrier()
-
-            x, _, nfe = sampling_fn(score_model)
-            x = inverse_scaler(x)
-            samples = x.clamp(0.0, 1.0)
-
-            torch.save(samples, os.path.join(
-                sample_dir, 'samples_%d_%d.pth' % (r, global_rank)))
-            np.save(os.path.join(sample_dir, 'nfes_%d_%d.npy' %
-                    (r, global_rank)), np.array([nfe]))
-        # x, _, nfe = sampling_fn(score_model)
-        # logging.info('NFE: %d' % nfe)
-
-            fig, ax = plt.subplots()
+        
+        fig, ax = plt.subplots()
             
-            ax.set_aspect('equal')
+        ax.set_aspect('equal')
             
-            lim_dict = {'multigaussian_2D':
+        lim_dict = {'multigaussian_2D':
                     {'xlim': (-3, 3),
                      'ylim': (-1.5, 1.5)},
                 'multigaussian_2D_close':
@@ -414,8 +398,24 @@ def evaluate(config, workdir):
                 'multimodal_swissroll':                  
                     {'xlim': (-1, 1),
                      'ylim': (-1, 1)} 
-                }
-            
+                }    
+
+        for r in range(num_sampling_rounds):
+            if global_rank == 0:
+                logging.info('sampling -- round: %d' % r)
+            dist.barrier()
+
+            x, _, nfe = sampling_fn(score_model)
+            #x = inverse_scaler(x)
+            samples = x #.clamp(0.0, 1.0)
+
+            torch.save(samples, os.path.join(
+                sample_dir, 'samples_%d_%d.pth' % (r, global_rank)))
+            np.save(os.path.join(sample_dir, 'nfes_%d_%d.npy' %
+                    (r, global_rank)), np.array([nfe]))
+        # x, _, nfe = sampling_fn(score_model)
+        # logging.info('NFE: %d' % nfe)
+
             if config.dataset == "multigaussian_1D":
                 ax.hist(x.cpu().numpy().flatten(), bins=50, range=(-2.5, 2.5))
             elif config.dataset in lim_dict.keys():
@@ -427,9 +427,9 @@ def evaluate(config, workdir):
             else:
                 ax.scatter(x.cpu().numpy()[:, 0], x.cpu().numpy()[:, 1], s=3)
             
-            plt.savefig(os.path.join(sample_dir,
+        plt.savefig(os.path.join(sample_dir,
                         'sample_rank_%d.png' % global_rank))
-            plt.close()
+        plt.close()
 
 def reverse_forces(config, workdir):
     ''' Visualization of reverse diffusion forces. '''
