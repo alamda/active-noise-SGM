@@ -122,7 +122,7 @@ class NCSNpp(nn.Module):
         if self.resblock_type == 'ddpm':
             ResnetBlock = functools.partial(ResnetBlockDDPM,
                                             act=self.act,
-                                            droput=dropout,
+                                            dropout=dropout,
                                             init_scale=init_scale,
                                             skip_rescale=self.skip_rescale)
         elif self.resblock_type == 'biggan':
