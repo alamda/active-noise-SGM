@@ -433,12 +433,12 @@ class ActiveDiffusion(CLD):
         Ta = self.Ta
 
         x, eta = torch.chunk(u, 2, dim=1)
-        if self.config.data_dim == 2:
-            x = torch.reshape(x, (-1,2))
-            eta = torch.reshape(eta, (-1,2))
-        elif self.config.data_dim == 1:
-            x = x.flatten()
-            eta = eta.flatten()
+        #if self.config.data_dim == 2:
+        #    x = torch.reshape(x, (-1,2))
+        #    eta = torch.reshape(eta, (-1,2))
+        #elif self.config.data_dim == 1:
+        #    x = x.flatten()
+        #    eta = eta.flatten()
 
         drift_x = - k * beta * x + beta*eta
         drift_eta =  - beta *eta / tau
@@ -468,17 +468,22 @@ class ActiveDiffusion(CLD):
         covar = torch.reshape(covar, (2,2))
         
         sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
-        
-        sample_1 = sampler.sample(sample_shape=torch.Size([*shape]))
-        sample_2 = sampler.sample(sample_shape=torch.Size([*shape]))
+
+        if self.config.is_image:
+            sample_1 = sampler.sample(sample_shape=torch.Size([*shape]))
+            sample_2 = sampler.sample(sample_shape=torch.Size([*shape]))
+        else:
+            sample_1 = sampler.sample_n(shape[0])
+            sample_2 = sampler.sample_n(shape[0])
         
         sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=-1)
         sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=-1)
         
-        sample_1x = sample_1x.reshape(shape)
-        sample_1eta = sample_1eta.reshape(shape)
-        sample_2x = sample_2x.reshape(shape)
-        sample_2eta = sample_2eta.reshape(shape)
+        if self.config.is_image:
+            sample_1x = sample_1x.reshape(shape)
+            sample_1eta = sample_1eta.reshape(shape)
+            sample_2x = sample_2x.reshape(shape)
+            sample_2eta = sample_2eta.reshape(shape)
         
         if self.config.data_dim == 1 or self.config.is_image:
             sample_x = sample_1x
