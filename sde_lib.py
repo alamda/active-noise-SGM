@@ -385,13 +385,16 @@ class PassiveDiffusion(VPSDE):
         return np.sqrt(self.Tp / self.k ) * torch.randn(*shape, device=self.config.device), None
     
     def var(self, t, var0x=None): 
-        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
+        if var0x is None:
+            var0x = add_dimensions(torch.zeros_like(
+                t, dtype=torch.float64, device=t.device), self.config.is_image, dim=self.config.data_dim)
 
-        a = torch.exp(-self.k * beta_int)
+        beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
         
-        var = (1/self.k)*self.Tp*(1-a**2)
-        return [var]
-    
+        coeff = torch.exp(-2*self.k*beta_int)
+
+        return [ (self.Tp/self.k)*(1 - (1. - var0x) * coeff) ]
+
     def mean(self, x, t):
         beta_int = add_dimensions(self.beta_int_fn(t), self.config.is_image, dim=self.config.data_dim)
 
@@ -506,8 +509,11 @@ class ActiveDiffusion(CLD):
                 (Ta / tau**2) * (tau/(k*c) + 1/d**2*(4*a*b/c - b**2*tau - a**2/k))
   
         M12 = Ta /(tau * c* d) * (k *(1-b**2) - 1/tau * (1 + b**2 - 2*a*b))
-   
-        M22 = (Ta/tau)*(1-b**2)
+
+        if var0v is None:
+            M22 = (Ta/tau)*(1-b**2)
+        else:
+            M22 = (Ta/tau) * (1 - 0.*b**2)
 
         return [ M11 + self.numerical_eps, M12 + self.numerical_eps, M22 + self.numerical_eps]
     
