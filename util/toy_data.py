@@ -11,6 +11,7 @@ from sklearn.datasets import make_swiss_roll
 from util.ising_2D import Ising2D
 import mmap
 import gc
+import ast
 
 def inf_data_gen(dataset, batch_size, config=None):
     if dataset == 'multimodal_swissroll':
@@ -145,23 +146,47 @@ def inf_data_gen(dataset, batch_size, config=None):
         return data
 
     elif dataset == 'alanine_dipeptide':
-        
         with open("alanine_dipeptide.npy", "r+b") as f:
             mm = mmap.mmap(f.fileno(), 0)
-            angles = np.frombuffer(mm, dtype=float)
+            
+            # Get the offset containing the file header
+            header_len = mm[8] + mm[9]
+            # 10 is the length of magic string for npy file
+            unaligned_offset = header_len + 10
+            
+            # Offset must be a multiple of dtype size
+            # for alignment purposes
+            if unaligned_offset % 64 != 0:
+                offset = unaligned_offset + unaligned_offset % 64
+            else:
+                offset = unaligned_offset
 
-            angles = angles.reshape(-1,2)
+            # Get array size from header information
+            info_bytes = mm[10:offset]
+            info_dict = ast.literal_eval(info_bytes.decode('utf-8'))
+            arr_shape = info_dict['shape']
+
+            # mmap np array from buffer using offset
+            # not using np.memmap bc it cannot be explicitly closed -
+            # risk of memory leak
+            angles = np.frombuffer(mm, dtype=float, offset=128)
+
+            angles = angles.reshape(arr_shape)
             num_points = angles.shape[0]
-        
+            
+            # Select random points from mmapped array 
             point_idx_arr = np.random.randint(low=0, high=num_points, size=batch_size)
-        
-            data = angles[point_idx_arr].copy()/180.
+
+            # Normalize dihedral angles and copy training batch subset to new array
+            data = angles[point_idx_arr].copy() #/180.
+            
+            # Close mmap and clear memory
             del angles
             mm.close()
             gc.collect()
-
-            #print(data, flush=True)
+            
             return torch.from_numpy(data)
+
     elif dataset == "ising_2D":
         lattice_list = []
         for _ in range(batch_size):
