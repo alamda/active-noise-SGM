@@ -9,7 +9,8 @@ import torch
 import numpy as np
 from sklearn.datasets import make_swiss_roll
 from util.ising_2D import Ising2D
-
+import mmap
+import gc
 
 def inf_data_gen(dataset, batch_size, config=None):
     if dataset == 'multimodal_swissroll':
@@ -144,15 +145,23 @@ def inf_data_gen(dataset, batch_size, config=None):
         return data
 
     elif dataset == 'alanine_dipeptide':
-        angles = np.loadtxt("alanine_dipeptide.dat", usecols=(0,1))/180
-    
-        num_points = angles.shape[0]
         
-        point_idx_arr = np.random.randint(low=0, high=num_points, size=batch_size)
+        with open("alanine_dipeptide.npy", "r+b") as f:
+            mm = mmap.mmap(f.fileno(), 0)
+            angles = np.frombuffer(mm, dtype=float)
+
+            angles = angles.reshape(-1,2)
+            num_points = angles.shape[0]
         
-        data = angles[point_idx_arr]
+            point_idx_arr = np.random.randint(low=0, high=num_points, size=batch_size)
         
-        return torch.from_numpy(data)
+            data = angles[point_idx_arr].copy()/180.
+            del angles
+            mm.close()
+            gc.collect()
+
+            #print(data, flush=True)
+            return torch.from_numpy(data)
     elif dataset == "ising_2D":
         lattice_list = []
         for _ in range(batch_size):
