@@ -59,7 +59,7 @@ class MLP(nn.Module):
 class ResNet(nn.Module):
     def __init__(self,
                  config,
-                 input_dim=2,
+                 input_dim=None,
                  index_dim=1,
                  hidden_dim=64,
                  n_hidden_layers=20):
@@ -71,6 +71,9 @@ class ResNet(nn.Module):
 
         self.x_input = True
         self.z_input = True if config.sde in ('cld', 'active', 'chiral_active') else False
+
+        if input_dim is None:
+            input_dim = config.data_dim
 
         if self.x_input and self.z_input:
             in_dim = input_dim * 2 + index_dim
