@@ -469,28 +469,21 @@ class ActiveDiffusion(CLD):
         
         sampler = MultivariateNormal(loc=zero_mean, covariance_matrix=covar)
 
-        if self.config.is_image:
-            sample_1 = sampler.sample(sample_shape=torch.Size([*shape]))
-            sample_2 = sampler.sample(sample_shape=torch.Size([*shape]))
-        else:
-            sample_1 = sampler.sample_n(shape[0])
-            sample_2 = sampler.sample_n(shape[0])
+        x_sample_list = []
+        eta_sample_list = []
         
-        sample_1x, sample_1eta = torch.chunk(sample_1, 2, dim=-1)
-        sample_2x, sample_2eta = torch.chunk(sample_2, 2, dim=-1)
+        for _ in range(shape[1]):
+            if self.config.is_image:
+                sample = sampler.sample(sample_shape=torch.Size([*shape]))
+            else:
+                sample = sampler.sample(sample_shape=torch.Size([*shape[:1]]))
+            
+            x_sample, eta_sample = torch.chunk(sample, 2, dim=-1)
+            x_sample_list.append(x_sample)
+            eta_sample_list.append(eta_sample)
         
-        if self.config.is_image:
-            sample_1x = sample_1x.reshape(shape)
-            sample_1eta = sample_1eta.reshape(shape)
-            sample_2x = sample_2x.reshape(shape)
-            sample_2eta = sample_2eta.reshape(shape)
-        
-        if self.config.data_dim == 1 or self.config.is_image:
-            sample_x = sample_1x
-            sample_eta = sample_1eta
-        else:
-            sample_x = torch.cat((sample_1x, sample_2x), dim=1)
-            sample_eta = torch.cat((sample_1eta, sample_2eta), dim=1)
+        sample_x = torch.cat(x_sample_list, dim=1)
+        sample_eta = torch.cat(eta_sample_list, dim=1)
         
         return sample_x, sample_eta
     
