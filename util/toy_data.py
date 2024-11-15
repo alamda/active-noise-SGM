@@ -145,8 +145,8 @@ def inf_data_gen(dataset, batch_size, config=None):
         
         return data
 
-    elif dataset == 'alanine_dipeptide':
-        with open("alanine_dipeptide.npy", "r+b") as f:
+    elif (dataset == 'alanine_dipeptide') or (dataset == 'alanine_dipeptide_25'):
+        with open(f"{dataset}.npy", "r+b") as f:
             mm = mmap.mmap(f.fileno(), 0)
             
             # Get the offset containing the file header

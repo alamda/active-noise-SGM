@@ -104,6 +104,32 @@ def get_data_inverse_scaler_ising(config):
     if (config.dataset == 'ising_2D') and config.is_image:
         return lambda x: torch.where(torch.where(x == 0., random.choice([-1., 1.]), x) < torch.mean(x), -1., 1.) #torch.sign(x)
 
+def get_data_scaler_alanine_dipeptide_25(config):
+    if (config.dataset == 'alanine_dipeptide_25'):
+        def scale_fn(data):
+            
+            for idx in range(data.shape[1]):
+                d = data[:,idx]
+                data[:,idx] = ( d - d.mean() ) / d.std()
+            
+            return data
+        return scale_fn
+    
+def get_data_inverse_scaler_alanine_dipeptide_25(config):
+    if (config.dataset == 'alanine_dipeptide_25'):
+        def inverse_scale_fn(data):
+            train_data = np.load('alanine_dipeptide_25.npy')
+            
+            train_data_means = train_data.mean(axis=0)
+            train_data_stds = train_data.std(axis=0)
+                        
+            for idx in range(data.shape[1]):
+                d = data[:,idx]
+                data[:,idx] = d * train_data_stds[idx] + train_data_means[idx]
+        
+            return data
+        return inverse_scale_fn
+
 def compute_bpd_from_nll(nll, D, inverse_scaler):
     offset = 7 - inverse_scaler(-1)
     bpd = nll / (np.log(2.) * D) + offset

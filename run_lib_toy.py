@@ -20,7 +20,7 @@ from models import mlp
 from models import ncsnpp
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
-from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn, get_data_inverse_scaler, get_data_scaler
+from util.utils import make_dir, get_optimizer, optimization_manager, set_seeds, compute_eval_loss, compute_non_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn, get_data_inverse_scaler, get_data_scaler, get_data_scaler_alanine_dipeptide_25, get_data_inverse_scaler_alanine_dipeptide_25
 from util.checkpoint import save_checkpoint, restore_checkpoint
 import losses
 import sde_lib
@@ -97,8 +97,12 @@ def train(config, workdir):
     
     # Utility functions to map images from [0, 1] to [-1, 1] and back.
     # Used for Ising model only
-    scaler = get_data_scaler(config)
-    inverse_scaler = get_data_inverse_scaler(config)
+    if config.dataset == 'alanine_dipeptide_25':
+        scaler = get_data_scaler_alanine_dipeptide_25(config)
+        inverse_scaler = get_data_inverse_scaler_alanine_dipeptide_25(config)
+    else:
+        scaler = get_data_scaler(config)
+        inverse_scaler = get_data_inverse_scaler(config)
 
     optim_params = score_model.parameters()
     optimizer = get_optimizer(config, optim_params)
