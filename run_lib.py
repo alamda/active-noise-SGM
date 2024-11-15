@@ -19,7 +19,7 @@ from util.utils import calculate_frechet_distance
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
 from models import ncsnpp
-from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img, debug_save_img
+from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img
 from util.utils import compute_eval_loss, compute_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
 from util import datasets
 from util.checkpoint import save_checkpoint, restore_checkpoint
@@ -54,7 +54,6 @@ def train(config, workdir):
     likelihood_dir = os.path.join(workdir, 'likelihood')
     fid_dir = os.path.join(workdir, 'fid')
     train_data_dir = os.path.join(workdir, 'train_data')
-    debug_dir = os.path.join(workdir, 'debug')
 
     if global_rank == 0:
         logging.info(config)
@@ -65,7 +64,6 @@ def train(config, workdir):
             make_dir(fid_dir)
             make_dir(tb_dir)
             make_dir(train_data_dir)
-            make_dir(debug_dir)
         writer = tensorboard.SummaryWriter(tb_dir)
     dist.barrier()
 
@@ -132,8 +130,8 @@ def train(config, workdir):
     dist.barrier()
 
     optimize_fn = optimization_manager(config)
-    train_step_fn = losses.get_step_fn(True, optimize_fn, sde, config, debug_dir=debug_dir)
-    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config, debug_dir=debug_dir)
+    train_step_fn = losses.get_step_fn(True, optimize_fn, sde, config)
+    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config)
 
     sampling_shape = (config.sampling_batch_size,
                       config.image_channels,
@@ -219,12 +217,6 @@ def train(config, workdir):
                 
                 this_sample_dir = os.path.join(sample_dir, 'iter_%d' % step)
                 make_dir(this_sample_dir)
-
-                if config.debug:
-                    debug_save_img(x, os.path.join(this_sample_dir, 'sample_x_debug.png'), title=f'iter: {step}')
-                    
-                    if config.sde in ('cld', 'active', 'chiral_active'):
-                        debug_save_img(v, os.path.join(this_sample_dir, 'sample_v_debug.png'), title=f'iter: {step}')
 
                 x = inverse_scaler(x)
                 logging.info('NFE for snapshot at step %d: %d' % (step, nfe))
@@ -362,12 +354,10 @@ def evaluate(config, workdir):
     checkpoint_dir = os.path.join(workdir, 'checkpoints')
     fid_dir = os.path.join(eval_dir, 'fid')
     samples_dir = os.path.join(eval_dir, 'samples')
-    debug_dir = os.path.join(eval_dir, 'debug')
     if global_rank == 0:
         logging.info(config)
         make_dir(fid_dir)
         make_dir(samples_dir)
-        make_dir(debug_dir)
     dist.barrier()
 
     beta_fn = build_beta_fn(config)
@@ -407,7 +397,7 @@ def evaluate(config, workdir):
     _, valid_queue, _ = datasets.get_loaders(config)
 
     optimize_fn = optimization_manager(config)
-    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config, debug_dir=debug_dir)
+    eval_step_fn = losses.get_step_fn(False, optimize_fn, sde, config)
 
     sampling_shape = (config.sampling_batch_size,
                       config.image_channels,
@@ -514,27 +504,7 @@ def evaluate(config, workdir):
                 logging.info('sampling -- round: %d' % r)
             dist.barrier()
 
-            x, _, nfe = sampling_fn(score_model)
-            
-            if (config.dataset == 'ising_2D') and config.debug:
-                import matplotlib.pyplot as plt
-                
-                x_mean = x.cpu().flatten().mean()
-                x_std = x.cpu().flatten().std()
-                
-                fig, ax = plt.subplots(layout='constrained')
-                pic = ax.imshow(x.cpu().reshape(x.shape[-2], x.shape[-1]), cmap='viridis')
-                ax.set_title(f'mean: {x_mean}, std: {x_std}')
-                fig.colorbar(pic, ax=ax)
-                plt.savefig(os.path.join(
-                    samples_dir, 'continuous_sample_%d_%d.png' %
-                    (r, global_rank)))
-                
-                plt.close()
-                
-                np.save(os.path.join(samples_dir, 'continuous_samples_%d_%d.npy' %
-                            (r, global_rank)), x.cpu())
-            
+            x, _, nfe = sampling_fn(score_model)            
             x = inverse_scaler(x)
                         
             samples = x.clamp(0.0, 1.0)
