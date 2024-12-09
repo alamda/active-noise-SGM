@@ -484,7 +484,10 @@ class ActiveDiffusion(CLD):
         
         sample_x = torch.cat(x_sample_list, dim=1)
         sample_eta = torch.cat(eta_sample_list, dim=1)
-        
+
+        if self.config.is_image:
+            sample_x = torch.squeeze(sample_x, dim=-1)
+            sample_eta = torch.squeeze(sample_eta, dim=-1)
         return sample_x, sample_eta
     
     def var(self, t, var0x=None, var0v=None, beta_int=None):
