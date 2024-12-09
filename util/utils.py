@@ -108,10 +108,15 @@ def get_data_scaler_alanine_dipeptide_25(config):
     if (config.dataset == 'alanine_dipeptide_25'):
         def scale_fn(data):
             
+            train_data_mins = train_data.min(axis=0)
+            train_data_maxs = train_data.max(axis=0)
+
             for idx in range(data.shape[1]):
                 d = data[:,idx]
-                data[:,idx] = ( d - d.mean() ) / d.std()
-            
+                min_val = train_data_mins[idx]
+                max_val = train_data_maxs[idx]
+                data[:,idx] = 2 * (d - min_val) / (max_val - min_val) - 1
+
             return data
         return scale_fn
     
@@ -120,13 +125,53 @@ def get_data_inverse_scaler_alanine_dipeptide_25(config):
         def inverse_scale_fn(data):
             train_data = np.load('alanine_dipeptide_25.npy')
             
-            train_data_means = train_data.mean(axis=0)
-            train_data_stds = train_data.std(axis=0)
+            train_data_mins = train_data.min(axis=0)
+            train_data_maxs = train_data.max(axis=0)
                         
             for idx in range(data.shape[1]):
                 d = data[:,idx]
-                data[:,idx] = d * train_data_stds[idx] + train_data_means[idx]
+                min_val = train_data_mins[idx]
+                max_val = train_data_maxs[idx]
+                data[:,idx] = 0.5 * (d + 1) * (max_val - min_val) + min_val
         
+            return data
+        return inverse_scale_fn
+
+def get_data_scaler_ala_25(config):
+    if (config.dataset == 'ala_25') and config.is_image:
+        def scale_fn(data):
+
+            train_data = np.load('alanine_dipeptide_25.npy')
+            
+            train_data_mins = train_data.min(axis=0).reshape(5,5)
+            train_data_maxs = train_data.max(axis=0).reshape(5,5)     
+
+            for xidx in range(5):
+               for yidx in range(5):
+                    min_val = train_data_mins[xidx,yidx]
+                    max_val = train_data_maxs[xidx,yidx]
+                   
+                    d = data[:,:,xidx,yidx]
+                    data[:,:,xidx,yidx] = 2 * (d - min_val) / (max_val - min_val) - 1
+            
+            return data
+        return scale_fn
+    
+def get_data_inverse_scaler_ala_25(config):
+    if (config.dataset == 'ala_25') and config.is_image:
+        def inverse_scale_fn(data):
+            train_data = np.load('alanine_dipeptide_25.npy')
+            
+            train_data_mins = train_data.min(axis=0).reshape(5,5)
+            train_data_maxs = train_data.max(axis=0).reshape(5,5)     
+
+            for xidx in range(5):
+               for yidx in range(5):
+                    min_val = train_data_mins[xidx,yidx]
+                    max_val = train_data_maxs[xidx,yidx]
+                   
+                    d = data[:,:,xidx,yidx]
+                    data[:,:,xidx,yidx] = 0.5 * (d + 1) * (max_val - min_val) + min_val
             return data
         return inverse_scale_fn
 

@@ -170,10 +170,16 @@ def train(config, workdir):
 
             if config.save_train_data is True and config.max_save_train_data is not None:
                 if num_saved_train <= config.max_save_train_data:
-                    save_img(train_x.clamp(0.0, 1.0), os.path.join(
-                        train_data_dir, f'train_{step}'), title=f"iter: {step}")
-                    
-                    np.save(os.path.join(train_data_dir, f'train_{step}'), train_x.cpu())
+                    if config.dataset != 'ala_25':
+                        save_img(train_x.clamp(0.0, 1.0), os.path.join(
+                            train_data_dir, f'train_{step}'), title=f"iter: {step}")
+                        
+                        np.save(os.path.join(train_data_dir, f'train_{step}'), train_x.cpu())
+                    else:
+                        save_img(scaler(train_x).clamp(0.0, 1.0), os.path.join(
+                            train_data_dir, f'train_{step}'), title=f"iter: {step}")
+
+                        np.save(os.path.join(train_data_dir, f'train_{step}'), scaler(train_x).cpu())
                     
                     num_saved_train += 1
 
