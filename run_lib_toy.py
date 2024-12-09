@@ -215,8 +215,8 @@ def train(config, workdir):
                     {'xlim': (-1, 1),
                      'ylim': (-1, 1)} ,
                 'alanine_dipeptide':
-                    {'xlim': (-1.05, 1.05),
-                     'ylim': (-1.05, 1.05)}
+                    {'xlim': (-180, 180),
+                     'ylim': (-180, 180)}
                 }
             
             if config.dataset == "multigaussian_1D":
