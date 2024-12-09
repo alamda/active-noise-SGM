@@ -15,6 +15,7 @@ from thirdparty.lsun import LSUN, LSUNClass
 import os
 from torch._utils import _accumulate
 from util.ising_2D import Ising2DDataset
+from util.ala_25 import Ala25Dataset
 
 
 class CropCelebA64(object):
@@ -155,6 +156,13 @@ def get_loaders_eval(dataset, root, distributed, training_batch_size, testing_ba
                                     N=args.ising_lattice_size, \
                                     num_steps=args.ising_num_equil_steps, \
                                     num_samples=num_samples)
+    elif dataset == 'ala_25':
+        num_classes = 1
+        num_samples = int(args.n_train_iters * training_batch_size) + 1
+
+        train_data = Ala25Dataset(num_samples=num_samples)
+
+        valid_data = Ala25Dataset(num_samples=num_samples)
     else:
         raise NotImplementedError
 

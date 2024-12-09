@@ -19,7 +19,7 @@ from util.utils import calculate_frechet_distance
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
 from models import ncsnpp
-from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, set_seeds, save_img
+from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, get_data_scaler_ala_25, get_data_inverse_scaler_ala_25, set_seeds, save_img
 from util.utils import compute_eval_loss, compute_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
 from util import datasets
 from util.checkpoint import save_checkpoint, restore_checkpoint
@@ -102,6 +102,9 @@ def train(config, workdir):
     if config.dataset == 'ising_2D':
         scaler = get_data_scaler_ising(config)
         inverse_scaler = get_data_inverse_scaler_ising(config)
+    elif config.dataset == 'ala_25':
+        scaler = get_data_scaler_ala_25(config)
+        inverse_scaler = get_data_inverse_scaler_ala_25(config)
     else:
         scaler = get_data_scaler(config)
         inverse_scaler = get_data_inverse_scaler(config)
@@ -386,6 +389,9 @@ def evaluate(config, workdir):
     if config.dataset == 'ising_2D':
         scaler = get_data_scaler_ising(config)
         inverse_scaler = get_data_inverse_scaler_ising(config)
+    elif config.dataset == 'ala_25':
+        scaler = get_data_scaler_ala_25(config)
+        inverse_scaler = get_data_inverse_scaler_ala_25(config)
     else:
         scaler = get_data_scaler(config)
         inverse_scaler = get_data_inverse_scaler(config)
@@ -505,7 +511,8 @@ def evaluate(config, workdir):
             dist.barrier()
 
             x, _, nfe = sampling_fn(score_model)            
-            x = inverse_scaler(x)
+            if config.dataset != 'ala_25':
+                x = inverse_scaler(x)
                         
             samples = x.clamp(0.0, 1.0)
             
@@ -513,7 +520,7 @@ def evaluate(config, workdir):
                     samples_dir, 'sample_%d_%d.png' %
                     (r, global_rank)))
             
-            if config.dataset == 'ising_2D':
+            if config.dataset in ('ising_2D', 'ala_25'):
                 samples = x
 
             torch.save(samples, os.path.join(
