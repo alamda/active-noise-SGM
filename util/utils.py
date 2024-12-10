@@ -175,6 +175,41 @@ def get_data_inverse_scaler_ala_25(config):
             return data
         return inverse_scale_fn
 
+def get_data_scaler_ala_28(config):
+    if (config.dataset == 'ala_28') and config.is_image:
+        def scale_fn(data):
+            train_data = np.load('alanine_dipeptide_28.npy')
+            
+            train_data_mins = train_data.min(axis=0)
+            train_data_maxs = train_data.max(axis=0)     
+
+            for idx in range(28):
+                min_val = train_data_mins[idx]
+                max_val = train_data_maxs[idx]
+                
+                d = data[:,idx,0,0]
+                data[:,idx,0,0] = 2 * (d - min_val) / (max_val - min_val) - 1
+            
+            return data
+        return scale_fn
+    
+def get_data_inverse_scaler_ala_28(config):
+    if (config.dataset == 'ala_28') and config.is_image:
+        def inverse_scale_fn(data):
+            train_data = np.load('alanine_dipeptide_28.npy')
+
+            train_data_mins = train_data.min(axis=0)
+            train_data_maxs = train_data.max(axis=0)     
+
+            for idx in range(28):
+                min_val = train_data_mins[idx]
+                max_val = train_data_maxs[idx]
+                
+                d = data[:,idx,0,0]
+                data[:,idx,0,0] = 0.5 * (d + 1) * (max_val - min_val) + min_val
+            return data
+        return inverse_scale_fn
+
 def compute_bpd_from_nll(nll, D, inverse_scaler):
     offset = 7 - inverse_scaler(-1)
     bpd = nll / (np.log(2.) * D) + offset

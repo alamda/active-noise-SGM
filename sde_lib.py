@@ -473,21 +473,26 @@ class ActiveDiffusion(CLD):
         eta_sample_list = []
         
         for _ in range(shape[1]):
-            if self.config.is_image:
-                sample = sampler.sample(sample_shape=torch.Size([*shape]))
-            else:
-                sample = sampler.sample(sample_shape=torch.Size([*shape[:1]]))
+            # if self.config.is_image:
+            #     sample = sampler.sample(sample_shape=torch.Size([*shape]))
+            # else:
+            sample = sampler.sample(sample_shape=torch.Size([*shape[:1]]))
             
             x_sample, eta_sample = torch.chunk(sample, 2, dim=-1)
             x_sample_list.append(x_sample)
             eta_sample_list.append(eta_sample)
-        
+
         sample_x = torch.cat(x_sample_list, dim=1)
         sample_eta = torch.cat(eta_sample_list, dim=1)
+
+        if self.config.dataset == 'ala_28':
+            sample_x = sample_x[:,:,None, None, None]
+            sample_eta = sample_eta[:,:, None, None, None]
 
         if self.config.is_image:
             sample_x = torch.squeeze(sample_x, dim=-1)
             sample_eta = torch.squeeze(sample_eta, dim=-1)
+
         return sample_x, sample_eta
     
     def var(self, t, var0x=None, var0v=None, beta_int=None):

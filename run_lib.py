@@ -19,7 +19,10 @@ from util.utils import calculate_frechet_distance
 from models.ema import ExponentialMovingAverage
 from models import utils as mutils
 from models import ncsnpp
-from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, get_data_scaler_ising, get_data_inverse_scaler_ising, get_data_scaler_ala_25, get_data_inverse_scaler_ala_25, set_seeds, save_img
+from util.utils import make_dir, get_optimizer, optimization_manager, get_data_scaler, get_data_inverse_scaler, set_seeds, save_img
+from util.utils import get_data_scaler_ising, get_data_inverse_scaler_ising
+from util.utils import get_data_scaler_ala_25, get_data_inverse_scaler_ala_25
+from util.utils import get_data_scaler_ala_28, get_data_inverse_scaler_ala_28
 from util.utils import compute_eval_loss, compute_image_likelihood, broadcast_params, reduce_tensor, build_beta_fn, build_beta_int_fn
 from util import datasets
 from util.checkpoint import save_checkpoint, restore_checkpoint
@@ -105,6 +108,9 @@ def train(config, workdir):
     elif config.dataset == 'ala_25':
         scaler = get_data_scaler_ala_25(config)
         inverse_scaler = get_data_inverse_scaler_ala_25(config)
+    elif config.dataset == 'ala_28':
+        scaler = get_data_scaler_ala_28(config)
+        inverse_scaler = get_data_inverse_scaler_ala_28(config)
     else:
         scaler = get_data_scaler(config)
         inverse_scaler = get_data_inverse_scaler(config)
@@ -169,18 +175,18 @@ def train(config, workdir):
                 break
 
             if config.save_train_data is True and config.max_save_train_data is not None:
-                if num_saved_train <= config.max_save_train_data:
-                    if config.dataset != 'ala_25':
-                        save_img(train_x.clamp(0.0, 1.0), os.path.join(
-                            train_data_dir, f'train_{step}'), title=f"iter: {step}")
-                        
-                        np.save(os.path.join(train_data_dir, f'train_{step}'), train_x.cpu())
-                    else:
+                if num_saved_train <= config.max_save_train_data:   
+                    if config.dataset == 'ala_25':
                         save_img(scaler(train_x).clamp(0.0, 1.0), os.path.join(
                             train_data_dir, f'train_{step}'), title=f"iter: {step}")
 
                         np.save(os.path.join(train_data_dir, f'train_{step}'), scaler(train_x).cpu())
-                    
+                    elif config.dataset != 'ala_28':
+                        save_img(train_x.clamp(0.0, 1.0), os.path.join(
+                            train_data_dir, f'train_{step}'), title=f"iter: {step}")
+                        
+                        np.save(os.path.join(train_data_dir, f'train_{step}'), train_x.cpu())
+                                        
                     num_saved_train += 1
 
             if step % config.eval_freq == 0 and step >= config.eval_threshold:
@@ -231,8 +237,9 @@ def train(config, workdir):
                 logging.info('NFE for snapshot at step %d: %d' % (step, nfe))
                 writer.add_scalar('nfe', nfe, step)
                 
-                save_img(x.clamp(0.0, 1.0), os.path.join(
-                    this_sample_dir, 'sample.png'), title=f"iter: {step}")
+                if config.dataset != 'ala_28':
+                    save_img(x.clamp(0.0, 1.0), os.path.join(
+                        this_sample_dir, 'sample.png'), title=f"iter: {step}")
 
                 if config.sde in ('cld', 'active', 'chiral_active'):
                     np.save(os.path.join(this_sample_dir, 'sample_x'), x.cpu())
@@ -398,6 +405,9 @@ def evaluate(config, workdir):
     elif config.dataset == 'ala_25':
         scaler = get_data_scaler_ala_25(config)
         inverse_scaler = get_data_inverse_scaler_ala_25(config)
+    elif config.dataset == 'ala_28':
+        scaler = get_data_scaler_ala_28(config)
+        inverse_scaler = get_data_inverse_scaler_ala_28(config)
     else:
         scaler = get_data_scaler(config)
         inverse_scaler = get_data_inverse_scaler(config)
@@ -522,9 +532,10 @@ def evaluate(config, workdir):
                         
             samples = x.clamp(0.0, 1.0)
             
-            save_img(samples, os.path.join(
-                    samples_dir, 'sample_%d_%d.png' %
-                    (r, global_rank)))
+            if config.dataset != 'ala_28':
+                save_img(samples, os.path.join(
+                        samples_dir, 'sample_%d_%d.png' %
+                        (r, global_rank)))
             
             if config.dataset in ('ising_2D', 'ala_25'):
                 samples = x
